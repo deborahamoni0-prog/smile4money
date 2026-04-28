@@ -558,6 +558,7 @@ fn test_unauthorized_player_cannot_cancel() {
     client.cancel_match(&id, &Address::generate(&env));
 }
 
+// Issue #192: deposit by non-player address should return Unauthorized
 #[test]
 fn test_deposit_by_non_player_returns_unauthorized() {
     let (env, contract_id, _oracle, player1, player2, token, _admin) = setup();
