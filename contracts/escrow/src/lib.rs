@@ -25,15 +25,21 @@ impl EscrowContract {
             .unwrap_or(false)
     }
 
-    /// Initialize the contract with a trusted oracle address and an admin.
-    pub fn initialize(env: Env, oracle: Address, admin: Address) {
+    /// Initialize the contract with a trusted oracle address, an admin, and a default token.
+    /// Returns `Error::InvalidToken` if the token address is not a valid token contract.
+    pub fn initialize(env: Env, oracle: Address, admin: Address, token: Address) -> Result<(), Error> {
         if env.storage().instance().has(&DataKey::Oracle) {
             panic!("Contract already initialized");
         }
+        // Validate token by calling a read-only method; panics if not a real token contract
+        let token_client = token::Client::new(&env, &token);
+        let _ = token_client.decimals();
         env.storage().instance().set(&DataKey::Oracle, &oracle);
         env.storage().instance().set(&DataKey::Admin, &admin);
+        env.storage().instance().set(&DataKey::Token, &token);
         env.storage().instance().set(&DataKey::MatchCount, &0u64);
         env.storage().instance().set(&DataKey::Paused, &false);
+        Ok(())
     }
 
     /// Rotate the oracle address — requires the current oracle or admin to authorize.

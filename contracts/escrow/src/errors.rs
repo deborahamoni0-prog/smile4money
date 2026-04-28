@@ -20,4 +20,6 @@ pub enum Error {
     GameIdMismatch = 13,
     /// game_id already used in another match
     DuplicateGameId = 14,
+    /// token address is invalid or zero
+    InvalidToken = 15,
 }

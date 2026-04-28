@@ -22,7 +22,7 @@ fn setup() -> (Env, Address, Address, Address, Address, Address, Address) {
 
     let contract_id = env.register(EscrowContract, ());
     let client = EscrowContractClient::new(&env, &contract_id);
-    client.initialize(&oracle, &admin);
+    client.initialize(&oracle, &admin, &token_addr);
 
     (
         env,
@@ -475,10 +475,11 @@ fn test_double_initialize_fails() {
     env.mock_all_auths();
     let oracle = Address::generate(&env);
     let admin = Address::generate(&env);
+    let token_addr = env.register_stellar_asset_contract_v2(admin.clone()).address();
     let contract_id = env.register(EscrowContract, ());
     let client = EscrowContractClient::new(&env, &contract_id);
-    client.initialize(&oracle, &admin);
-    client.initialize(&oracle, &admin);
+    client.initialize(&oracle, &admin, &token_addr);
+    client.initialize(&oracle, &admin, &token_addr);
 }
 
 #[test]
@@ -742,9 +743,10 @@ fn test_non_admin_cannot_pause() {
     let admin = Address::generate(&env);
     let non_admin = Address::generate(&env);
     let oracle = Address::generate(&env);
+    let token_addr = env.register_stellar_asset_contract_v2(admin.clone()).address();
     let contract_id = env.register(EscrowContract, ());
     let client = EscrowContractClient::new(&env, &contract_id);
-    client.initialize(&oracle, &admin);
+    client.initialize(&oracle, &admin, &token_addr);
 
     use soroban_sdk::testutils::{MockAuth, MockAuthInvoke};
     env.set_auths(&[MockAuth {
@@ -769,9 +771,10 @@ fn test_non_admin_cannot_update_oracle() {
     let non_admin = Address::generate(&env);
     let oracle = Address::generate(&env);
     let new_oracle = Address::generate(&env);
+    let token_addr = env.register_stellar_asset_contract_v2(admin.clone()).address();
     let contract_id = env.register(EscrowContract, ());
     let client = EscrowContractClient::new(&env, &contract_id);
-    client.initialize(&oracle, &admin);
+    client.initialize(&oracle, &admin, &token_addr);
 
     use soroban_sdk::testutils::{MockAuth, MockAuthInvoke};
     env.set_auths(&[MockAuth {
@@ -1026,9 +1029,10 @@ fn test_non_admin_cannot_call_admin_functions() {
     let non_admin = Address::generate(&env);
     let oracle = Address::generate(&env);
     let new_oracle = Address::generate(&env);
+    let token_addr = env.register_stellar_asset_contract_v2(admin.clone()).address();
     let contract_id = env.register(EscrowContract, ());
     let client = EscrowContractClient::new(&env, &contract_id);
-    client.initialize(&oracle, &admin);
+    client.initialize(&oracle, &admin, &token_addr);
 
     use soroban_sdk::testutils::{MockAuth, MockAuthInvoke};
 
@@ -1297,4 +1301,19 @@ fn test_submit_result_on_cancelled_match_fails() {
         client.try_submit_result(&id, &String::from_str(&env, "cancelled_result"), &Winner::Player1, &oracle),
         Err(Ok(Error::InvalidState))
     );
+}
+
+// Issue #211: initialize rejects an invalid (non-token) address with a panic
+#[test]
+#[should_panic]
+fn test_initialize_invalid_token_panics() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let admin = Address::generate(&env);
+    let oracle = Address::generate(&env);
+    // A freshly generated address is not a token contract — decimals() will panic
+    let bad_token = Address::generate(&env);
+    let contract_id = env.register(EscrowContract, ());
+    let client = EscrowContractClient::new(&env, &contract_id);
+    client.initialize(&oracle, &admin, &bad_token);
 }

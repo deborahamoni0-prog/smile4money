@@ -48,6 +48,7 @@ pub enum DataKey {
     Oracle,
     Admin,
     Paused,
+    Token,
     /// Tracks used game_id strings to prevent duplicate matches for the same game.
     GameId(String),
 }
