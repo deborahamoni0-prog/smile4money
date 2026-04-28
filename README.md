@@ -32,6 +32,52 @@ This makes smile4money:
 - **Draw Handling**: Stakes are returned to both players in the event of a draw
 - **Transparent**: All escrow balances and payout history are verifiable on-chain
 
+## 🗺️ Match State Machine
+
+Every match moves through a strict set of states. Invalid transitions are rejected on-chain with `Error::InvalidState`.
+
+```
+                        create_match()
+                              │
+                              ▼
+                         ┌─────────┐
+                         │ Pending │  ◄─── initial state, no funds held
+                         └────┬────┘
+                              │
+              ┌───────────────┴───────────────┐
+              │                               │
+    deposit(player1)                   cancel_match()
+    deposit(player2)                   (either player)
+    [both must deposit]                        │
+              │                               ▼
+              ▼                         ┌───────────┐
+         ┌────────┐                     │ Cancelled │  ◄─── terminal
+         │ Active │                     └───────────┘
+         └───┬────┘                     Refunds any deposits already made
+             │
+      submit_result()
+      (oracle only)
+             │
+             ▼
+       ┌───────────┐
+       │ Completed │  ◄─── terminal
+       └───────────┘
+       Payout executed:
+         Winner → 2× stake_amount
+         Draw   → each player refunded stake_amount
+```
+
+### State Transition Rules
+
+| From | To | Trigger | Guard |
+|---|---|---|---|
+| — | `Pending` | `create_match()` | Contract not paused; valid players, stake, game_id |
+| `Pending` | `Active` | `deposit()` (second deposit) | Both `player1_deposited` and `player2_deposited` are true |
+| `Pending` | `Cancelled` | `cancel_match()` | Caller is player1 or player2 |
+| `Active` | `Completed` | `submit_result()` | Caller is the registered oracle; `game_id` matches |
+
+`Completed` and `Cancelled` are **terminal states** — once reached, no further transitions are allowed.
+
 ## 🛠️ Quick Start
 
 ### Prerequisites
