@@ -200,7 +200,9 @@ impl EscrowContract {
         }
 
         let client = token::Client::new(&env, &m.token);
-        client.transfer(&player, &env.current_contract_address(), &m.stake_amount);
+        client
+            .try_transfer(&player, &env.current_contract_address(), &m.stake_amount)
+            .map_err(|_| Error::TransferFailed)?;
 
         if is_p1 {
             m.player1_deposited = true;
