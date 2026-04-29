@@ -978,7 +978,7 @@ fn test_deposit_emits_event() {
         Symbol::new(&env, "match").into_val(&env),
         soroban_sdk::symbol_short!("deposit").into_val(&env),
     ];
-    let matched = events.iter().find(|(_, t, _)| *t == topics);
+    let matched = events.iter().find(|(_, t, _)| *t == deposit_topics);
     assert!(matched.is_some());
 
     let (_, _, data) = matched.unwrap();
@@ -1387,6 +1387,42 @@ fn test_escrow_balance_zero_after_cancel() {
     client.cancel_match(&id, &player1);
     assert_eq!(client.get_escrow_balance(&id), 0);
     assert_eq!(token_client.balance(&player1), 1000); // fully refunded
+}
+
+// Issue #180: Once both players have deposited the match transitions to Active.
+// cancel_match must be rejected for Active matches — neither player can unilaterally
+// cancel after both have committed funds. The only valid exit is submit_result by the oracle.
+#[test]
+fn test_cancel_with_both_deposits_requires_auth() {
+    let (env, contract_id, _oracle, player1, player2, token, _admin) = setup();
+    let client = EscrowContractClient::new(&env, &contract_id);
+
+    let id = client.create_match(
+        &player1,
+        &player2,
+        &100,
+        &token,
+        &String::from_str(&env, "both_dep_cancel"),
+        &Platform::Lichess,
+    );
+
+    // Both players deposit → state becomes Active
+    client.deposit(&id, &player1);
+    client.deposit(&id, &player2);
+    assert_eq!(client.get_match(&id).state, MatchState::Active);
+
+    // Neither player can cancel once the match is Active
+    assert_eq!(
+        client.try_cancel_match(&id, &player1),
+        Err(Ok(Error::InvalidState))
+    );
+    assert_eq!(
+        client.try_cancel_match(&id, &player2),
+        Err(Ok(Error::InvalidState))
+    );
+
+    // Match must remain Active — funds are safe
+    assert_eq!(client.get_match(&id).state, MatchState::Active);
 }
 
 // Issue #100: Test that submit_result on a cancelled match returns InvalidState (no deposit)
