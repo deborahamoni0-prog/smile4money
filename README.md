@@ -158,7 +158,7 @@ stellar keys generate deployer --network testnet
 **Initialization**
 
 ```
-initialize(oracle: Address, admin: Address)
+initialize(oracle: Address, admin: Address, token: Address)
 ```
 
 **Match Management**

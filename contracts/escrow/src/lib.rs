@@ -107,7 +107,7 @@ impl EscrowContract {
         if player1 == player2 {
             return Err(Error::InvalidPlayers);
         }
-        if game_id.len() > MAX_GAME_ID_LEN {
+        if game_id.len() == 0 || game_id.len() > MAX_GAME_ID_LEN {
             return Err(Error::InvalidGameId);
         }
         // Reject duplicate game_id — same game cannot be used in multiple matches
