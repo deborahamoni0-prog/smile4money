@@ -1,0 +1,13 @@
+export type WalletStatus = 'notInstalled' | 'disconnected' | 'connecting' | 'connected' | 'error';
+
+export type Mode = 'claim' | 'burn';
+
+export type Network = 'testnet' | 'mainnet' | 'unknown';
+
+export interface WalletState {
+  status: WalletStatus;
+  address: string | null;
+  error: string | null;
+  balance: string | null;
+  network: Network;
+}
