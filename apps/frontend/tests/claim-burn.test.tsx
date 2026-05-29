@@ -251,10 +251,11 @@ describe('ClaimBurn — submit', () => {
 
   it('calls onBurn with amount', async () => {
     const onBurn = vi.fn().mockResolvedValue(undefined);
-    render(<ClaimBurn walletState="connected" onBurn={onBurn} />);
+    render(<ClaimBurn walletState={connectedWallet()} onBurn={onBurn} />);
     fireEvent.click(screen.getByTestId('toggle-burn'));
     fireEvent.change(screen.getByTestId('amount-input'), { target: { value: '25' } });
     fireEvent.click(screen.getByTestId('submit-btn'));
+    fireEvent.click(screen.getByTestId('confirm-btn'));
     await waitFor(() => expect(screen.getByTestId('success-msg')).toBeInTheDocument());
     expect(onBurn).toHaveBeenCalledWith('25');
   });
@@ -264,6 +265,7 @@ describe('ClaimBurn — submit', () => {
     render(<ClaimBurn walletState="connected" onClaim={onClaim} />);
     fireEvent.change(screen.getByTestId('amount-input'), { target: { value: '5' } });
     fireEvent.click(screen.getByTestId('submit-btn'));
+    fireEvent.click(screen.getByTestId('confirm-btn'));
     await waitFor(() =>
       expect(screen.getByTestId('error-msg')).toHaveTextContent('Insufficient balance'),
     );
@@ -274,6 +276,7 @@ describe('ClaimBurn — submit', () => {
     render(<ClaimBurn walletState="connected" onClaim={onClaim} />);
     fireEvent.change(screen.getByTestId('amount-input'), { target: { value: '5' } });
     fireEvent.click(screen.getByTestId('submit-btn'));
+    fireEvent.click(screen.getByTestId('confirm-btn'));
     await waitFor(() => expect(screen.getByTestId('error-msg')).toBeInTheDocument());
     fireEvent.change(screen.getByTestId('amount-input'), { target: { value: '10' } });
     expect(screen.queryByTestId('error-msg')).not.toBeInTheDocument();

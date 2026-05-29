@@ -127,8 +127,6 @@ const styles = {
 export function ClaimBurn({
   walletState,
   onConnect,
-  onDisconnect,
-  onRefreshBalance,
   onClaim,
   onBurn,
   onSwitchNetwork,
@@ -144,6 +142,10 @@ export function ClaimBurn({
   const stateKey = typeof walletState === 'string' ? walletState : walletState.status;
   const balance = typeof walletState === 'object' ? (walletState.balance ?? null) : null;
   const showConfirmation = typeof walletState === 'object';
+
+  const status: WalletStatus = typeof walletState === 'string' ? walletState : walletState.status;
+  const walletBalance = typeof walletState === 'string' ? null : walletState.balance;
+  const connectedAddress = publicKey ?? (typeof walletState === 'object' ? walletState.address : null);
 
   const balanceNum = useMemo(
     () => (balance !== null ? Number(balance) : null),
@@ -314,7 +316,7 @@ export function ClaimBurn({
           </button>
         </div>
 
-        {publicKey && (
+        {connectedAddress && (
           <div className="wallet-info" data-testid="wallet-info">
             <div className="wallet-info-row">
               <span className="wallet-info-label">Connected</span>
@@ -408,6 +410,28 @@ export function ClaimBurn({
               {isPending ? 'Processing\u2026' : mode === 'claim' ? 'Claim' : 'Burn'}
             </button>
           </form>
+        )}
+
+        {phase === 'confirm' && (
+          <div className="confirm-overlay" data-testid="confirm-overlay">
+            <p>Confirm {mode === 'claim' ? 'claim' : 'burn'} of {amount} XLM.</p>
+            <button
+              type="button"
+              className="btn btn-confirm"
+              onClick={handleConfirm}
+              data-testid="confirm-btn"
+            >
+              Confirm
+            </button>
+            <button
+              type="button"
+              className="btn btn-cancel"
+              onClick={() => setPhase('idle')}
+              data-testid="cancel-btn"
+            >
+              Cancel
+            </button>
+          </div>
         )}
 
         <div aria-live="polite" aria-atomic="true">
