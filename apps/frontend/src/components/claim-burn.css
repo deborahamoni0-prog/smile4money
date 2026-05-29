@@ -1,139 +1,90 @@
-/* claim-burn.css */
-
 .claim-burn {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 1.25rem;
+  gap: 1rem;
+  max-width: 400px;
   width: 100%;
-  max-width: 420px;
   margin: 0 auto;
-  padding: 2rem 1.5rem;
-  background: #0f1117;
-  border: 1px solid #1e2230;
-  border-radius: 16px;
-  font-family: 'Inter', system-ui, sans-serif;
-  color: #e2e8f0;
+  padding: 1.5rem;
+  border-radius: 12px;
+  background: #1a1a2e;
+  color: #e0e0e0;
 }
 
-/* ── Wallet states ─────────────────────────────────────── */
-
 .wallet-prompt {
-  font-size: 0.95rem;
-  color: #94a3b8;
-  text-align: center;
   margin: 0;
+  color: #a0a0b0;
+  font-size: 0.9rem;
 }
 
 .wallet-connecting {
-  font-size: 0.95rem;
-  color: #94a3b8;
-  text-align: center;
   margin: 0;
-  animation: pulse 1.4s ease-in-out infinite;
+  color: #a0a0b0;
+  font-size: 0.9rem;
+  animation: pulse 1.2s ease-in-out infinite;
 }
 
 @keyframes pulse {
   0%, 100% { opacity: 1; }
-  50%       { opacity: 0.4; }
+  50% { opacity: 0.4; }
 }
-
-/* ── Toggle ────────────────────────────────────────────── */
 
 .toggle {
   display: flex;
-  width: 100%;
-  background: #1a1f2e;
-  border-radius: 10px;
-  padding: 4px;
-  gap: 4px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #2e2e4e;
 }
 
 .toggle-btn {
   flex: 1;
-  padding: 0.55rem 0;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease;
+  padding: 0.5rem 1rem;
   background: transparent;
-  color: #64748b;
+  border: none;
+  color: #a0a0b0;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background 0.15s, color 0.15s;
 }
 
-.toggle-btn.active,
-.toggle-btn[aria-pressed='true'] {
-  background: #2563eb;
+.toggle-btn.active {
+  background: #4f46e5;
   color: #fff;
 }
 
-.toggle-btn:hover:not(.active):not([aria-pressed='true']) {
-  background: #1e2a3a;
-  color: #cbd5e1;
-}
-
-/* ── Form ──────────────────────────────────────────────── */
-
-form[data-testid='claim-burn-form'] {
+.claim-burn form {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  width: 100%;
 }
 
-form[data-testid='claim-burn-form'] label {
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: #94a3b8;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+.claim-burn label {
+  font-size: 0.85rem;
+  color: #a0a0b0;
 }
 
-form[data-testid='claim-burn-form'] input[type='number'] {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  background: #1a1f2e;
-  border: 1px solid #2d3748;
-  border-radius: 10px;
-  color: #e2e8f0;
+.claim-burn input[type='number'] {
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #2e2e4e;
+  background: #0f0f1a;
+  color: #e0e0e0;
   font-size: 1rem;
-  outline: none;
-  transition: border-color 0.2s ease;
+  width: 100%;
   box-sizing: border-box;
-  /* hide number spinners */
-  -moz-appearance: textfield;
 }
 
-form[data-testid='claim-burn-form'] input[type='number']::-webkit-inner-spin-button,
-form[data-testid='claim-burn-form'] input[type='number']::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-}
-
-form[data-testid='claim-burn-form'] input[type='number']:focus {
-  border-color: #2563eb;
-}
-
-form[data-testid='claim-burn-form'] input[type='number']:disabled {
+.claim-burn input[type='number']:disabled {
   opacity: 0.5;
-  cursor: not-allowed;
 }
-
-/* ── Buttons ───────────────────────────────────────────── */
 
 .btn {
-  width: 100%;
-  padding: 0.8rem;
+  padding: 0.65rem 1rem;
+  border-radius: 8px;
   border: none;
-  border-radius: 10px;
   font-size: 1rem;
-  font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.2s ease, transform 0.1s ease;
-}
-
-.btn:active:not(:disabled) {
-  transform: scale(0.98);
+  transition: opacity 0.15s;
 }
 
 .btn:disabled {
@@ -142,12 +93,8 @@ form[data-testid='claim-burn-form'] input[type='number']:disabled {
 }
 
 .btn-connect {
-  background: #2563eb;
+  background: #4f46e5;
   color: #fff;
-}
-
-.btn-connect:hover:not(:disabled) {
-  opacity: 0.88;
 }
 
 .btn-claim {
@@ -155,48 +102,31 @@ form[data-testid='claim-burn-form'] input[type='number']:disabled {
   color: #fff;
 }
 
-.btn-claim:hover:not(:disabled) {
-  opacity: 0.88;
-}
-
 .btn-burn {
   background: #dc2626;
   color: #fff;
 }
 
-.btn-burn:hover:not(:disabled) {
-  opacity: 0.88;
-}
-
-/* ── Feedback ──────────────────────────────────────────── */
-
 .feedback {
-  font-size: 0.875rem;
-  text-align: center;
   margin: 0;
-  padding: 0.6rem 1rem;
-  border-radius: 8px;
-  width: 100%;
-  box-sizing: border-box;
+  font-size: 0.875rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
 }
 
 .feedback.success {
-  background: #14532d33;
-  color: #4ade80;
-  border: 1px solid #16a34a55;
+  background: #14532d;
+  color: #86efac;
 }
 
 .feedback.error {
-  background: #7f1d1d33;
-  color: #f87171;
-  border: 1px solid #dc262655;
+  background: #450a0a;
+  color: #fca5a5;
 }
-
-/* ── Responsive ────────────────────────────────────────── */
 
 @media (max-width: 480px) {
   .claim-burn {
-    padding: 1.5rem 1rem;
-    border-radius: 12px;
+    padding: 1rem;
+    border-radius: 8px;
   }
 }
