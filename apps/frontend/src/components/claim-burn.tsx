@@ -1,3 +1,4 @@
+import React, { useMemo, useState } from 'react';
 import React, { useState } from 'react';
 import '../styles/claim-burn.css';
 
@@ -14,6 +15,90 @@ interface ClaimBurnProps {
   publicKey?: string | null;
   expectedNetwork?: string;
 }
+
+const styles = {
+  panel: {
+    width: '100%',
+    maxWidth: 420,
+    margin: '0 auto',
+    padding: 24,
+    borderRadius: 24,
+    background: '#ffffff',
+    boxShadow: '0 20px 50px rgba(0, 0, 0, 0.08)',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: 18,
+    fontFamily: 'Inter, system-ui, sans-serif',
+  },
+  walletPrompt: {
+    margin: 0,
+    fontSize: 16,
+    lineHeight: 1.5,
+    color: '#0f172a',
+  },
+  button: {
+    width: '100%',
+    borderRadius: 14,
+    border: 'none',
+    padding: '14px 18px',
+    fontSize: 16,
+    cursor: 'pointer',
+  },
+  connectButton: {
+    background: '#0f172a',
+    color: '#ffffff',
+  },
+  actionButton: {
+    background: '#0f172a',
+    color: '#ffffff',
+  },
+  toggleGroup: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: 8,
+  },
+  toggleButton: {
+    borderRadius: 14,
+    padding: '12px 0',
+    border: '1px solid #e2e8f0',
+    background: '#f8fafc',
+    color: '#334155',
+    cursor: 'pointer',
+    fontSize: 15,
+  },
+  toggleActive: {
+    background: '#0f172a',
+    color: '#ffffff',
+    border: '1px solid #0f172a',
+  },
+  fieldset: {
+    display: 'grid',
+    gap: 8,
+  },
+  label: {
+    fontSize: 14,
+    color: '#475569',
+  },
+  input: {
+    width: '100%',
+    borderRadius: 16,
+    border: '1px solid #cbd5e1',
+    padding: '14px 16px',
+    fontSize: 16,
+    color: '#0f172a',
+    outline: 'none',
+  },
+  feedback: {
+    fontSize: 14,
+    margin: 0,
+  },
+  successText: {
+    color: '#16a34a',
+  },
+  errorText: {
+    color: '#dc2626',
+  },
+};
 
 export function ClaimBurn({
   walletState,

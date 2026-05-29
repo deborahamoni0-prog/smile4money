@@ -186,6 +186,15 @@ describe('ClaimBurn — submit', () => {
     expect(onBurn).toHaveBeenCalledWith('5');
     expect(screen.getByText('XLM burned successfully!')).toBeInTheDocument();
   });
+  it('calls onBurn with amount', async () => {
+    const onBurn = vi.fn().mockResolvedValue(undefined);
+    render(<ClaimBurn walletState="connected" onBurn={onBurn} />);
+    fireEvent.click(screen.getByTestId('toggle-burn'));
+    fireEvent.change(screen.getByTestId('amount-input'), { target: { value: '12' } });
+    fireEvent.click(screen.getByTestId('submit-btn'));
+    await waitFor(() => expect(screen.getByTestId('success-msg')).toBeInTheDocument());
+    expect(onBurn).toHaveBeenCalledWith('12');
+  });
 
   it('calls onBurn with amount', async () => {
     const onBurn = vi.fn().mockResolvedValue(undefined);
