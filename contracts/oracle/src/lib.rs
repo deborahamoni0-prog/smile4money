@@ -43,7 +43,8 @@ impl OracleContract {
             .ok_or(Error::Unauthorized)?;
         admin.require_auth();
 
-        if game_id.len() > MAX_GAME_ID_LEN {
+        let game_id_len = game_id.len();
+        if game_id_len == 0 || game_id_len > MAX_GAME_ID_LEN {
             return Err(Error::InvalidGameId);
         }
 
@@ -155,6 +156,21 @@ mod tests {
             client.try_get_result(&999u64),
             Err(Ok(Error::ResultNotFound))
         ));
+    }
+
+    #[test]
+    fn test_submit_result_empty_game_id_fails() {
+        let (env, contract_id) = setup();
+        let client = OracleContractClient::new(&env, &contract_id);
+
+        assert_eq!(
+            client.try_submit_result(
+                &0u64,
+                &String::from_str(&env, ""),
+                &MatchResult::Player1Wins,
+            ),
+            Err(Ok(Error::InvalidGameId))
+        );
     }
 
     #[test]

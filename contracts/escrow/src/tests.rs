@@ -655,6 +655,23 @@ fn test_duplicate_game_id_fails() {
 }
 
 #[test]
+fn test_create_match_empty_game_id_fails() {
+    let (env, contract_id, _oracle, player1, player2, token, _admin) = setup();
+    let client = EscrowContractClient::new(&env, &contract_id);
+    assert_eq!(
+        client.try_create_match(
+            &player1,
+            &player2,
+            &100,
+            &token,
+            &String::from_str(&env, ""),
+            &Platform::Lichess,
+        ),
+        Err(Ok(Error::InvalidGameId))
+    );
+}
+
+#[test]
 #[should_panic(expected = "Error(Contract, #4)")]
 fn test_unauthorized_player_cannot_cancel() {
     let (env, contract_id, _oracle, player1, player2, token, _admin) = setup();
