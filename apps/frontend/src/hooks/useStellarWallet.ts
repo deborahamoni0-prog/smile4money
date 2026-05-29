@@ -54,13 +54,8 @@ async function fetchHorizonBalance(
   return native ? native.balance : '0';
 }
 
-function getInitialStatus(): WalletStatus {
-  if (typeof window === 'undefined') return 'disconnected';
-  return window.freighterApi ? 'disconnected' : 'notInstalled';
-}
-
 export function useStellarWallet(): StellarWallet {
-  const [status, setStatus] = useState<WalletStatus>(getInitialStatus);
+  const [status, setStatus] = useState<WalletStatus>('checking');
   const [address, setAddress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [balance, setBalance] = useState<string | null>(null);
@@ -71,7 +66,10 @@ export function useStellarWallet(): StellarWallet {
   const isInstalled = !!freighter;
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined') {
+      setStatus('disconnected');
+      return;
+    }
     setStatus(window.freighterApi ? 'disconnected' : 'notInstalled');
   }, []);
 

@@ -838,7 +838,7 @@ fn test_pause_blocks_all_state_changing_operations() {
     let (env, contract_id, oracle, player1, player2, token, _admin) = setup();
     let client = EscrowContractClient::new(&env, &contract_id);
 
-    // Create a match to test deposit and cancel when paused
+    // Create a match to test deposit and cancel while paused.
     let id = client.create_match(
         &player1,
         &player2,
@@ -869,24 +869,30 @@ fn test_pause_blocks_all_state_changing_operations() {
         Err(Ok(Error::ContractPaused))
     );
 
-    // 3. Block cancel_match
-    assert_eq!(
-        client.try_cancel_match(&id, &player1),
-        Err(Ok(Error::ContractPaused))
-    );
+    // 3. Allow cancel_match while paused
+    client.cancel_match(&id, &player1);
+    assert_eq!(client.get_match(&id).state, MatchState::Cancelled);
 
-    // Now unpause to create an active match for submit_result test
+    // Now unpause and create a fresh match to verify submit_result still respects pause.
     client.unpause();
-    client.deposit(&id, &player1);
-    client.deposit(&id, &player2);
+    let id2 = client.create_match(
+        &player1,
+        &player2,
+        &100,
+        &token,
+        &String::from_str(&env, "pause_test_active"),
+        &Platform::Lichess,
+    );
+    client.deposit(&id2, &player1);
+    client.deposit(&id2, &player2);
 
     client.pause();
 
     // 4. Block submit_result
     assert_eq!(
         client.try_submit_result(
-            &id,
-            &String::from_str(&env, "pause_test"),
+            &id2,
+            &String::from_str(&env, "pause_test_active"),
             &Winner::Player1,
             &oracle
         ),
@@ -894,14 +900,14 @@ fn test_pause_blocks_all_state_changing_operations() {
     );
 
     client.unpause();
-    // Verify it works after unpause
+    // Verify submit_result works after unpause
     client.submit_result(
-        &id,
-        &String::from_str(&env, "pause_test"),
+        &id2,
+        &String::from_str(&env, "pause_test_active"),
         &Winner::Player1,
         &oracle,
     );
-    assert_eq!(client.get_match(&id).state, MatchState::Completed);
+    assert_eq!(client.get_match(&id2).state, MatchState::Completed);
 }
 
 #[test]

@@ -352,10 +352,9 @@ impl EscrowContract {
     /// - If neither or only one player has deposited: the calling player's auth suffices.
     /// - If both players have deposited: both players must authorize, because cancelling
     ///   would withdraw funds that the other player has already committed.
+    ///
+    /// Cancelation is allowed while the contract is paused so players can recover funds.
     pub fn cancel_match(env: Env, match_id: u64, caller: Address) -> Result<(), Error> {
-        if Self::is_paused(&env) {
-            return Err(Error::ContractPaused);
-        }
         let mut m: Match = env
             .storage()
             .persistent()
