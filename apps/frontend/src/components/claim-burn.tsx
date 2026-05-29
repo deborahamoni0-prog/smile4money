@@ -7,7 +7,7 @@ type Mode = 'claim' | 'burn';
 type WalletState = 'checking' | 'notInstalled' | 'disconnected' | 'connecting' | 'connected' | 'wrongNetwork';
 
 interface ClaimBurnProps {
-  walletState?: WalletState;
+  walletState: WalletState;
   onConnect?: () => void;
   onClaim?: (amount: string) => Promise<void>;
   onBurn?: (amount: string) => Promise<void>;
@@ -101,8 +101,10 @@ const styles = {
 };
 
 export function ClaimBurn({
-  walletState = 'disconnected',
+  walletState,
   onConnect,
+  onDisconnect,
+  onRefreshBalance,
   onClaim,
   onBurn,
   onSwitchNetwork,
@@ -111,30 +113,64 @@ export function ClaimBurn({
 }: ClaimBurnProps) {
   const [mode, setMode] = useState<Mode>('claim');
   const [amount, setAmount] = useState('');
-  const [status, setStatus] = useState<'idle' | 'pending' | 'success' | 'error'>('idle');
+  const [phase, setPhase] = useState<SubmitPhase>('idle');
   const [errorMsg, setErrorMsg] = useState('');
+  const [txHash, setTxHash] = useState<string | null>(null);
+  const [touched, setTouched] = useState(false);
 
-  const actionLabel = useMemo(() => (mode === 'claim' ? 'Claim' : 'Burn'), [mode]);
-  const isSubmitDisabled =
-    status === 'pending' || !amount || Number(amount) <= 0 || Number.isNaN(Number(amount));
+  const balanceNum = useMemo(
+    () => (walletState.balance !== null ? Number(walletState.balance) : null),
+    [walletState.balance],
+  );
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (isSubmitDisabled) return;
+  const exceedsBalance = useMemo(
+    () =>
+      mode === 'burn' &&
+      balanceNum !== null &&
+      isValidAmount(amount) &&
+      Number(amount) > balanceNum,
+    [amount, balanceNum, mode],
+  );
 
-    setStatus('pending');
+  const valid = isValidAmount(amount) && !exceedsBalance;
+
+  function resetFeedback() {
+    setPhase('idle');
+    setTxHash(null);
     setErrorMsg('');
+  }
 
+  function handleMax() {
+    if (walletState.balance !== null) {
+      setAmount(stripTrailingZeros(walletState.balance));
+      setTouched(true);
+      resetFeedback();
+    }
+  }
+
+  function handleRequestSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!valid) return;
+    setPhase('confirm');
+  }
+
+  async function handleConfirm() {
+    setPhase('pending');
+    setErrorMsg('');
+    setTxHash(null);
     try {
+      let hash: string | void;
       if (mode === 'claim') {
-        await onClaim?.(amount);
+        hash = await onClaim?.(amount);
       } else {
-        await onBurn?.(amount);
+        hash = await onBurn?.(amount);
       }
-      setStatus('success');
+      if (hash) setTxHash(hash);
+      setPhase('success');
       setAmount('');
+      setTouched(false);
     } catch (err) {
-      setStatus('error');
+      setPhase('error');
       setErrorMsg(err instanceof Error ? err.message : 'Transaction failed');
     }
   }
