@@ -20,6 +20,16 @@ export function App() {
     return Promise.resolve();
   }
 
+  const handleClaim = async (amount: string) => {
+    console.info('Claim request', amount);
+    return undefined;
+  };
+
+  const handleBurn = async (amount: string) => {
+    console.info('Burn request', amount);
+    return undefined;
+  };
+
   return (
     <main style={{ padding: '2rem', minHeight: '100vh', background: '#f5f5f5' }}>
       <ClaimBurn

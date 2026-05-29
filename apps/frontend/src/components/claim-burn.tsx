@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import React, { useState } from 'react';
 import '../styles/claim-burn.css';
+import type { WalletState as WalletStateObject } from '../types';
 
 type Mode = 'claim' | 'burn';
 type SubmitPhase = 'idle' | 'confirm' | 'pending' | 'success' | 'error';
@@ -169,17 +170,18 @@ export function ClaimBurn({
     setStatus('idle');
     setTxHash(null);
     setErrorMsg('');
-  }
+    setTxHash(null);
+  };
 
   function handleMax() {
     if (balance !== null) {
       setAmount(stripTrailingZeros(balance));
       resetFeedback();
     }
-  }
+  };
 
-  function handleRequestSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     if (!valid) return;
     if (showConfirmation) {
       setPhase('confirm');
@@ -191,6 +193,7 @@ export function ClaimBurn({
   async function handleConfirm() {
     setStatus('pending');
     setErrorMsg('');
+    setTxHash(null);
 
     try {
       const action = mode === 'claim' ? onClaim : onBurn;
@@ -204,10 +207,8 @@ export function ClaimBurn({
     }
   };
 
-  const handleModeChange = (newMode: Mode) => {
-    setMode(newMode);
-    setStatus('idle');
-    setErrorMsg('');
+  const handleCancel = () => {
+    setPhase('idle');
   };
 
   function handleCancel() {
@@ -307,6 +308,7 @@ export function ClaimBurn({
       <>
         <div className="toggle" role="group" aria-label="Select mode">
           <button
+            type="button"
             className={`toggle-btn${mode === 'claim' ? ' active' : ''}`}
             onClick={() => handleModeChange('claim')}
             aria-pressed={mode === 'claim'}
@@ -315,6 +317,7 @@ export function ClaimBurn({
             Claim
           </button>
           <button
+            type="button"
             className={`toggle-btn${mode === 'burn' ? ' active' : ''}`}
             onClick={() => handleModeChange('burn')}
             aria-pressed={mode === 'burn'}
@@ -442,6 +445,32 @@ export function ClaimBurn({
           </div>
         )}
 
+        {phase === 'confirm' && (
+          <div className="confirm-overlay" data-testid="confirm-overlay">
+            <p className="confirm-text">
+              Confirm {mode} of <strong>{amount}</strong> XLM?
+            </p>
+            <div className="confirm-actions">
+              <button
+                type="button"
+                className="btn btn-switch-network"
+                onClick={handleCancel}
+                data-testid="cancel-btn"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={`btn btn-${mode}`}
+                onClick={handleConfirm}
+                data-testid="confirm-btn"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        )}
+
         <div aria-live="polite" aria-atomic="true">
           {phase === 'success' && (
             <div className="feedback success" role="status" data-testid="success-msg">
@@ -456,6 +485,11 @@ export function ClaimBurn({
           {phase === 'error' && (
             <p className="feedback error" role="alert" data-testid="error-msg">
               {errorMsg}
+            </p>
+          )}
+          {txHash && (
+            <p className="feedback success" role="status" data-testid="tx-hash">
+              Transaction hash: {txHash}
             </p>
           )}
         </div>
