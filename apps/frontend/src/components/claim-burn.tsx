@@ -4,8 +4,13 @@ import '../styles/claim-burn.css';
 type Mode = 'claim' | 'burn';
 type Status = 'idle' | 'confirm' | 'pending' | 'success' | 'error';
 
+interface WalletStateObj {
+  status: string;
+  balance?: string | null;
+}
+
 interface ClaimBurnProps {
-  walletState: 'checking' | 'notInstalled' | 'disconnected' | 'connecting' | 'connected' | 'wrongNetwork' | 'error';
+  walletState: string | WalletStateObj;
   onConnect?: () => void;
   onClaim?: (amount: string) => Promise<string | void>;
   onBurn?: (amount: string) => Promise<string | void>;
@@ -34,7 +39,29 @@ export function ClaimBurn({
   const [errorMsg, setErrorMsg] = useState('');
   const [txHash, setTxHash] = useState<string | null>(null);
 
-  const isPending = status === 'pending';
+  const stateKey = typeof walletState === 'string' ? walletState : walletState.status;
+
+  const walletBalance =
+    balanceProp ??
+    (typeof walletState === 'object' ? (walletState.balance ?? null) : null);
+
+  const isPending = phase === 'pending';
+
+  const balanceNum = useMemo(
+    () => (walletBalance != null ? Number(walletBalance) : null),
+    [walletBalance],
+  );
+
+  const exceedsBalance = useMemo(
+    () =>
+      mode === 'burn' &&
+      balanceNum !== null &&
+      isValidAmount(amount) &&
+      Number(amount) > balanceNum,
+    [amount, balanceNum, mode],
+  );
+
+  const valid = isValidAmount(amount) && !exceedsBalance;
 
   useEffect(() => {
     if (status === 'success') {
@@ -47,6 +74,13 @@ export function ClaimBurn({
     setStatus('idle');
     setTxHash(null);
     setErrorMsg('');
+  }
+
+  function handleMax() {
+    if (walletBalance != null) {
+      setAmount(stripTrailingZeros(walletBalance));
+      resetFeedback();
+    }
   }
 
   function handleAmountChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -87,8 +121,9 @@ export function ClaimBurn({
     setStatus('idle');
   }
 
-  // Render wallet states
-  if (walletState === 'checking' || walletState === 'connecting') {
+  // ── Wallet state screens ──────────────────────────────────────────
+
+  if (stateKey === 'checking' || stateKey === 'connecting') {
     return (
       <div className="wallet-state" data-testid="wallet-connecting">
         <div className="spinner" />
@@ -100,7 +135,7 @@ export function ClaimBurn({
   if (walletState === 'notInstalled') {
     return (
       <div className="wallet-state" data-testid="wallet-not-installed">
-        <div className="wallet-state-icon">⚠️</div>
+        <span className="wallet-state-icon">&#9888;&#65039;</span>
         <h3 className="wallet-state-title">Freighter Not Found</h3>
         <p className="wallet-state-message">
           Please install the{' '}
@@ -116,16 +151,12 @@ export function ClaimBurn({
   if (walletState === 'disconnected') {
     return (
       <div className="wallet-state" data-testid="wallet-disconnected">
-        <div className="wallet-state-icon">💼</div>
+        <span className="wallet-state-icon">&#128188;</span>
         <h3 className="wallet-state-title">Connect Your Wallet</h3>
         <p className="wallet-state-message">
           Connect your Freighter wallet to claim rewards or burn tokens.
         </p>
-        <button
-          className="btn btn-connect"
-          onClick={onConnect}
-          data-testid="connect-wallet-btn"
-        >
+        <button className="btn btn-connect" onClick={onConnect} data-testid="connect-wallet-btn">
           Connect Wallet
         </button>
       </div>
@@ -135,7 +166,7 @@ export function ClaimBurn({
   if (walletState === 'wrongNetwork') {
     return (
       <div className="wallet-state" data-testid="wallet-wrong-network">
-        <div className="wallet-state-icon">🌐</div>
+        <span className="wallet-state-icon">&#127760;</span>
         <h3 className="wallet-state-title">Wrong Network</h3>
         <p className="wallet-state-message">
           Please switch your Freighter wallet to <strong>{expectedNetwork}</strong>.
@@ -151,7 +182,25 @@ export function ClaimBurn({
     );
   }
 
-  // Render connected form
+  if (stateKey === 'error') {
+    return (
+      <div className="wallet-state" data-testid="wallet-error">
+        <span className="wallet-state-icon">&#9888;&#65039;</span>
+        <h3 className="wallet-state-title">Connection Error</h3>
+        <p className="wallet-state-message">
+          An error occurred while connecting to your wallet.
+        </p>
+        <button className="btn btn-connect" onClick={onConnect} data-testid="retry-connect-btn">
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
+  // ── Connected UI ──────────────────────────────────────────────────
+
+  const showConfirm = phase === 'confirm';
+
   return (
     <div className="claim-burn" data-testid="claim-burn">
       <h2 className="claim-burn-title">Claim &amp; Burn</h2>
@@ -161,7 +210,7 @@ export function ClaimBurn({
         <button
           type="button"
           className={`toggle-btn${mode === 'claim' ? ' active' : ''}`}
-          onClick={() => handleToggle('claim')}
+          onClick={() => handleModeChange('claim')}
           aria-pressed={mode === 'claim'}
           data-testid="toggle-claim"
         >
@@ -170,7 +219,7 @@ export function ClaimBurn({
         <button
           type="button"
           className={`toggle-btn${mode === 'burn' ? ' active' : ''}`}
-          onClick={() => handleToggle('burn')}
+          onClick={() => handleModeChange('burn')}
           aria-pressed={mode === 'burn'}
           data-testid="toggle-burn"
         >
@@ -178,18 +227,39 @@ export function ClaimBurn({
         </button>
       </div>
 
-      {/* Wallet Info */}
+      {/* Wallet info */}
       {publicKey && (
         <div className="wallet-info" data-testid="wallet-info">
-          <span className="wallet-info-label">Connected</span>
-          <span className="wallet-info-address">
-            {publicKey.slice(0, 4)}&hellip;{publicKey.slice(-4)}
-          </span>
+          <div className="wallet-info-row">
+            <span className="wallet-info-label">Connected</span>
+            <span className="wallet-info-address">
+              {publicKey.slice(0, 4)}&hellip;{publicKey.slice(-4)}
+            </span>
+            <button className="btn-disconnect" onClick={onDisconnect} data-testid="disconnect-btn">
+              Disconnect
+            </button>
+          </div>
+          {walletBalance != null && (
+            <div className="wallet-balance-row">
+              <span className="wallet-balance-label">Balance</span>
+              <span className="wallet-balance-value" data-testid="wallet-balance">
+                {stripTrailingZeros(walletBalance)} XLM
+              </span>
+              <button
+                className="btn-refresh-balance"
+                onClick={onRefreshBalance}
+                data-testid="refresh-balance-btn"
+                title="Refresh balance"
+              >
+                &#8635;
+              </button>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Confirmation Overlay */}
-      {status === 'confirm' && (
+      {/* Confirmation overlay */}
+      {showConfirm && (
         <div className="confirm-overlay" data-testid="confirm-overlay">
           <p className="confirm-text">
             {mode === 'claim' ? 'Claim' : 'Burn'} <strong>{amount}</strong> XLM?
@@ -207,41 +277,49 @@ export function ClaimBurn({
               type="button"
               className={`btn btn-${mode}`}
               onClick={handleConfirm}
-              disabled={isPending}
               data-testid="confirm-btn"
             >
-              {isPending
-                ? mode === 'claim'
-                  ? 'Claiming…'
-                  : 'Burning…'
-                : 'Confirm'}
+              Confirm
             </button>
           </div>
         </div>
       )}
 
       {/* Form */}
-      {status !== 'confirm' && (
-        <form onSubmit={handleRequestSubmit} data-testid="claim-burn-form">
-          <div className="form-group">
-            <label htmlFor="amount-input">Amount (XLM)</label>
+      <form onSubmit={handleRequestSubmit} data-testid="claim-burn-form">
+        <div className="form-group">
+          <label htmlFor="amount-input">Amount (XLM)</label>
+          <div className="input-row">
             <input
               id="amount-input"
               type="number"
-              step="0.0000001"
               min="0"
-              placeholder="Enter amount"
+              step="any"
               value={amount}
               onChange={handleAmountChange}
               disabled={isPending}
+              placeholder="0.00"
               data-testid="amount-input"
             />
+            {mode === 'burn' && walletBalance != null && (
+              <button
+                type="button"
+                className="btn-max"
+                onClick={handleMax}
+                disabled={isPending}
+                data-testid="max-btn"
+              >
+                Max
+              </button>
+            )}
           </div>
+        </div>
 
+        {(!showConfirm || isPending) && (
           <button
             type="submit"
             className={`btn btn-${mode}`}
-            disabled={isPending || !isValidAmount(amount)}
+            disabled={isPending || !valid}
             data-testid="submit-btn"
           >
             {isPending
@@ -253,30 +331,17 @@ export function ClaimBurn({
               : 'Burn'}
           </button>
 
-          {/* Feedback Messages */}
-          {status === 'success' && (
-            <div
-              className="feedback success"
-              role="status"
-              aria-live="polite"
-              data-testid="success-msg"
-            >
-              ✓ Transaction successful!
-              {txHash && <div className="tx-hash">{txHash}</div>}
-            </div>
-          )}
-
-          {status === 'error' && (
-            <div
-              className="feedback error"
-              role="alert"
-              aria-live="assertive"
-              data-testid="error-msg"
-            >
-              ✗ {errorMsg}
-            </div>
-          )}
-        </form>
+      {/* Feedback */}
+      {phase === 'success' && (
+        <p className="feedback success" role="status" data-testid="success-msg">
+          {mode === 'claim' ? 'XLM claimed successfully!' : 'XLM burned successfully!'}
+          {txHash && <span className="tx-hash">{txHash}</span>}
+        </p>
+      )}
+      {phase === 'error' && (
+        <p className="feedback error" role="alert" data-testid="error-msg">
+          {errorMsg}
+        </p>
       )}
     </div>
   );
