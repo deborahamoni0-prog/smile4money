@@ -1,131 +1,201 @@
-import React, { useMemo, useState } from 'react';
 import React, { useState } from 'react';
 import '../styles/claim-burn.css';
-import type { WalletState as WalletStateObject } from '../types';
 
 type Mode = 'claim' | 'burn';
-type SubmitPhase = 'idle' | 'confirm' | 'pending' | 'success' | 'error';
-
-type WalletStateProp = string | { status: string; balance?: string | null };
-
-type SubmitStatus = 'idle' | 'pending' | 'success' | 'error';
 
 interface ClaimBurnProps {
-  walletState: WalletStateProp;
+  walletState: { status: string; balance?: string | null };
   onConnect?: () => void;
   onDisconnect?: () => void;
   onRefreshBalance?: () => void;
   onClaim?: (amount: string) => Promise<string | void>;
   onBurn?: (amount: string) => Promise<string | void>;
-  onSwitchNetwork?: () => void;
   publicKey?: string | null;
-  expectedNetwork?: string;
 }
 
-const styles = {
-  panel: {
-    width: '100%',
-    maxWidth: 420,
-    minWidth: 0,
-    margin: '0 auto',
-    padding: 24,
-    borderRadius: 24,
-    background: '#ffffff',
-    boxShadow: '0 20px 50px rgba(0, 0, 0, 0.08)',
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: 18,
-    fontFamily: 'Inter, system-ui, sans-serif',
-    boxSizing: 'border-box' as const,
-  },
-  walletPrompt: {
-    margin: 0,
-    fontSize: 16,
-    lineHeight: 1.5,
-    color: '#0f172a',
-  },
-  walletStatusRow: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  statusBadge: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 999,
-    padding: '8px 14px',
-    background: '#ecfdf5',
-    color: '#166534',
-    fontSize: 13,
-    fontWeight: 600,
-  },
-  button: {
-    width: '100%',
-    borderRadius: 14,
-    border: 'none',
-    padding: '14px 18px',
-    fontSize: 16,
-    cursor: 'pointer',
-    transition: 'background 0.2s ease, transform 0.15s ease',
-  },
-  connectButton: {
-    background: '#0f172a',
-    color: '#ffffff',
-  },
-  actionButton: {
-    background: '#0f172a',
-    color: '#ffffff',
-  },
-  toggleGroup: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: 8,
-  },
-  toggleButton: {
-    borderRadius: 14,
-    padding: '12px 0',
-    border: '1px solid #e2e8f0',
-    background: '#f8fafc',
-    color: '#334155',
-    cursor: 'pointer',
-    fontSize: 15,
-  },
-  toggleActive: {
-    background: '#0f172a',
-    color: '#ffffff',
-    border: '1px solid #0f172a',
-  },
-  fieldset: {
-    display: 'grid',
-    gap: 8,
-  },
-  label: {
-    fontSize: 14,
-    color: '#475569',
-  },
-  input: {
-    width: '100%',
-    borderRadius: 16,
-    border: '1px solid #cbd5e1',
-    padding: '14px 16px',
-    fontSize: 16,
-    color: '#0f172a',
-    outline: 'none',
-    boxSizing: 'border-box' as const,
-  },
-  feedback: {
-    fontSize: 14,
-    margin: 0,
-  },
-  successText: {
-    color: '#16a34a',
-  },
-  errorText: {
-    color: '#dc2626',
-  },
-};
+export function ClaimBurn({
+  walletState,
+  onConnect,
+  onClaim,
+  onBurn,
+  onDisconnect,
+  onRefreshBalance,
+  publicKey,
+}: ClaimBurnProps) {
+  const [mode, setMode] = useState<Mode>('claim');
+  const [amount, setAmount] = useState('');
+  const [pending, setPending] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const status = walletState?.status;
+  const balance = walletState?.balance ? Number(walletState.balance) : null;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!amount || Number(amount) <= 0 || pending) return;
+
+    setPending(true);
+    setMessage(null);
+
+    try {
+      const handler = mode === 'claim' ? onClaim : onBurn;
+      await handler?.(amount);
+      setMessage({ type: 'success', text: `${mode === 'claim' ? 'Claimed' : 'Burned'} ${amount} XLM` });
+      setAmount('');
+    } catch (err) {
+      setMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Transaction failed',
+      });
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const handleMax = () => {
+    if (balance !== null) {
+      setAmount(String(balance));
+    }
+  };
+
+  // Render wallet disconnected state
+  if (status === 'disconnected') {
+    return (
+      <div className="claim-burn">
+        <h2 className="title">Claim & Burn</h2>
+        <p className="wallet-prompt">Connect your wallet to get started</p>
+        <button className="btn btn-connect" onClick={onConnect}>
+          Connect Wallet
+        </button>
+      </div>
+    );
+  }
+
+  // Render loading state
+  if (status === 'connecting') {
+    return (
+      <div className="claim-burn">
+        <h2 className="title">Claim & Burn</h2>
+        <p className="wallet-connecting">Connecting wallet...</p>
+      </div>
+    );
+  }
+
+  // Render not installed state
+  if (status === 'notInstalled') {
+    return (
+      <div className="claim-burn">
+        <h2 className="title">Claim & Burn</h2>
+        <p className="wallet-prompt">Freighter wallet not found. Please install it.</p>
+        <button className="btn btn-connect" onClick={onConnect}>
+          Install Freighter
+        </button>
+      </div>
+    );
+  }
+
+  // Render connected state with form
+  return (
+    <div className="claim-burn">
+      <h2 className="title">Claim & Burn</h2>
+
+      {/* Wallet info */}
+      <div className="wallet-info">
+        {publicKey && (
+          <p>Connected: {publicKey.slice(0, 6)}...{publicKey.slice(-4)}</p>
+        )}
+        {balance !== null && (
+          <p>Balance: {balance.toFixed(2)} XLM</p>
+        )}
+      </div>
+
+      {/* Toggle buttons */}
+      <div className="toggle">
+        <button
+          type="button"
+          className={`toggle-btn ${mode === 'claim' ? 'active' : ''}`}
+          onClick={() => {
+            setMode('claim');
+            setMessage(null);
+          }}
+        >
+          Claim
+        </button>
+        <button
+          type="button"
+          className={`toggle-btn ${mode === 'burn' ? 'active' : ''}`}
+          onClick={() => {
+            setMode('burn');
+            setMessage(null);
+          }}
+        >
+          Burn
+        </button>
+      </div>
+
+      {/* Form */}
+      <form onSubmit={handleSubmit}>
+        <label htmlFor="amount">
+          Amount (XLM)
+        </label>
+        <div className="input-wrapper">
+          <input
+            id="amount"
+            type="number"
+            min="0"
+            step="0.01"
+            value={amount}
+            onChange={(e) => {
+              setAmount(e.target.value);
+              setMessage(null);
+            }}
+            placeholder="0.00"
+            disabled={pending}
+          />
+          {mode === 'burn' && balance !== null && (
+            <button
+              type="button"
+              className="btn-max"
+              onClick={handleMax}
+              disabled={pending}
+            >
+              Max
+            </button>
+          )}
+        </div>
+        <button
+          type="submit"
+          className={`btn btn-${mode}`}
+          disabled={!amount || pending}
+        >
+          {pending ? 'Processing...' : mode === 'claim' ? 'Claim' : 'Burn'}
+        </button>
+      </form>
+
+      {/* Messages */}
+      {message && (
+        <div className={`message message-${message.type}`}>
+          {message.text}
+        </div>
+      )}
+
+      {/* Disconnect button */}
+      {onDisconnect && (
+        <button className="btn-disconnect" onClick={onDisconnect}>
+          Disconnect
+        </button>
+      )}
+      
+      {onRefreshBalance && (
+        <button className="btn-refresh" onClick={onRefreshBalance}>
+          Refresh Balance
+        </button>
+      )}
+    </div>
+  );
+}
+
+
 
 export function ClaimBurn({
   walletState,
@@ -235,100 +305,17 @@ export function ClaimBurn({
         <p className="wallet-state-message">
           Please install the{' '}
           <a href="https://freighter.app" target="_blank" rel="noopener noreferrer">
-            Freighter wallet extension
-          </a>{' '}
-          to continue.
-        </p>
-      </div>
-    );
-  }
+    Disconnect,
+  onRefreshBalance,
+  publicKey,
+}: ClaimBurnProps) {
+  const [mode, setMode] = useState<Mode>('claim');
+  const [amount, setAmount] = useState('');
+  const [pending, setPending] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  function renderDisconnected() {
-    return (
-      <div className="wallet-state" data-testid="wallet-disconnected">
-        <div className="wallet-state-icon">{'\uD83D\uDCBC'}</div>
-        <h3 className="wallet-state-title">Connect Your Wallet</h3>
-        <p className="wallet-state-message">
-          Connect your Freighter wallet to claim rewards or burn tokens.
-        </p>
-        <button className="btn btn-connect" onClick={onConnect} data-testid="connect-wallet-btn">
-          Connect Wallet
-        </button>
-      </div>
-    );
-  }
-
-  function renderConnecting() {
-    return (
-      <div className="wallet-state" data-testid="wallet-connecting">
-        <div className="spinner" />
-        <p className="wallet-state-message">Connecting to Freighter&hellip;</p>
-      </div>
-    );
-  }
-
-  function renderWrongNetwork() {
-    return (
-      <div className="wallet-state" data-testid="wallet-wrong-network">
-        <div className="wallet-state-icon">{'\uD83C\uDF10'}</div>
-        <h3 className="wallet-state-title">Wrong Network</h3>
-        <p className="wallet-state-message">
-          Please switch your Freighter wallet to <strong>{expectedNetwork}</strong>.
-        </p>
-        <button
-          className="btn btn-switch-network"
-          onClick={onSwitchNetwork}
-          data-testid="switch-network-btn"
-        >
-          Switch to {expectedNetwork}
-        </button>
-      </div>
-    );
-  }
-
-  function renderError() {
-    return (
-      <div className="wallet-state" data-testid="wallet-error">
-        <div className="wallet-state-icon">{'\u26A0\uFE0F'}</div>
-        <h3 className="wallet-state-title">Connection Error</h3>
-        <p className="wallet-state-message">
-          {errorMsg || 'An error occurred while connecting to your wallet.'}
-        </p>
-        <button className="btn btn-connect" onClick={onConnect} data-testid="retry-connect-btn">
-          Try Again
-        </button>
-      </div>
-    );
-  }
-
-  function renderForm() {
-    const isPending = phase === 'pending';
-
-    return (
-      <>
-        <div className="toggle" role="group" aria-label="Select mode">
-          <button
-            type="button"
-            className={`toggle-btn${mode === 'claim' ? ' active' : ''}`}
-            onClick={() => handleModeChange('claim')}
-            aria-pressed={mode === 'claim'}
-            data-testid="toggle-claim"
-          >
-            Claim
-          </button>
-          <button
-            type="button"
-            className={`toggle-btn${mode === 'burn' ? ' active' : ''}`}
-            onClick={() => handleModeChange('burn')}
-            aria-pressed={mode === 'burn'}
-            data-testid="toggle-burn"
-          >
-            Burn
-          </button>
-        </div>
-
-        {connectedAddress && (
-          <div className="wallet-info" data-testid="wallet-info">
+  const status = walletState?.status;
+  const balance = walletState?.balance ? Number(walletState.balance) : null;       <div className="wallet-info" data-testid="wallet-info">
             <div className="wallet-info-row">
               <span className="wallet-info-label">Connected</span>
               <span className="wallet-info-address">
@@ -413,75 +400,65 @@ export function ClaimBurn({
               )}
             </div>
             <button
-              type="submit"
-              className={`btn btn-${mode}`}
-              disabled={isPending || !amount || Number(amount) <= 0}
-              data-testid="submit-btn"
-            >
-              {isPending ? 'Processing\u2026' : mode === 'claim' ? 'Claim' : 'Burn'}
-            </button>
-          </form>
-        )}
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!amount || Number(amount) <= 0 || pending) return;
 
-        {phase === 'confirm' && (
-          <div className="confirm-overlay" data-testid="confirm-overlay">
-            <p>Confirm {mode === 'claim' ? 'claim' : 'burn'} of {amount} XLM.</p>
-            <button
-              type="button"
-              className="btn btn-confirm"
-              onClick={handleConfirm}
-              data-testid="confirm-btn"
-            >
-              Confirm
-            </button>
-            <button
-              type="button"
-              className="btn btn-cancel"
-              onClick={() => setPhase('idle')}
-              data-testid="cancel-btn"
-            >
-              Cancel
-            </button>
-          </div>
-        )}
+    setPending(true);
+    setMessage(null);
 
-        {phase === 'confirm' && (
-          <div className="confirm-overlay" data-testid="confirm-overlay">
-            <p className="confirm-text">
-              Confirm {mode} of <strong>{amount}</strong> XLM?
-            </p>
-            <div className="confirm-actions">
-              <button
-                type="button"
-                className="btn btn-switch-network"
-                onClick={handleCancel}
-                data-testid="cancel-btn"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className={`btn btn-${mode}`}
-                onClick={handleConfirm}
-                data-testid="confirm-btn"
-              >
-                Confirm
-              </button>
-            </div>
-          </div>
-        )}
+    try {
+      const handler = mode === 'claim' ? onClaim : onBurn;
+      await handler?.(amount);
+      setMessage({ type: 'success', text: `${mode === 'claim' ? 'Claimed' : 'Burned'} ${amount} XLM` });
+      setAmount('');
+    } catch (err) {
+      setMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Transaction failed',
+      });
+    } finally {
+      setPending(false);
+    }
+  };
 
-        <div aria-live="polite" aria-atomic="true">
-          {phase === 'success' && (
-            <div className="feedback success" role="status" data-testid="success-msg">
-              <p>{mode === 'claim' ? 'Claimed successfully!' : 'Burned successfully!'}</p>
-              {txHash && (
-                <p className="tx-hash" data-testid="tx-hash">
-                  TX: {txHash.slice(0, 8)}&hellip;{txHash.slice(-6)}
-                </p>
-              )}
-            </div>
-          )}
+  const handleMax = () => {
+    if (balance !== null) {
+      setAmount(String(balance));
+    }
+  };
+
+  // Render wallet disconnected state
+  if (status === 'disconnected') {
+    return (
+      <div className="claim-burn">
+        <h2 className="title">Claim & Burn</h2>
+        <p className="wallet-prompt">Connect your wallet to get started</p>
+        <button className="btn btn-connect" onClick={onConnect}>
+          Connect Wallet
+        </button>
+      </div>
+    );
+  }
+
+  // Render loading state
+  if (status === 'connecting') {
+    return (
+      <div className="claim-burn">
+        <h2 className="title">Claim & Burn</h2>
+        <p className="wallet-connecting">Connecting wallet...</p>
+      </div>
+    );
+  }
+
+  // Render not installed state
+  if (status === 'notInstalled') {
+    return (
+      <div className="claim-burn">
+        <h2 className="title">Claim & Burn</h2>
+        <p className="wallet-prompt">Freighter wallet not found. Please install it.</p>
+        <button className="btn btn-connect" onClick={onConnect}>
+          Install Freighter
           {phase === 'error' && (
             <p className="feedback error" role="alert" data-testid="error-msg">
               {errorMsg}
