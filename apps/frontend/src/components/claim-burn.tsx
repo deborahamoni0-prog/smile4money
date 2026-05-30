@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
 import '../styles/claim-burn.css';
-import type { WalletState as WalletStateObject } from '../types';
 
 type Mode = 'claim' | 'burn';
 type Phase = 'idle' | 'confirm' | 'pending' | 'success' | 'error';
@@ -114,7 +113,6 @@ export function ClaimBurn({
     setPhase('pending');
     setErrorMsg('');
     setTxHash(null);
-
     try {
       const action = mode === 'claim' ? onClaim : onBurn;
       const hash = await action?.(amount);
@@ -133,7 +131,7 @@ export function ClaimBurn({
 
   // ── Wallet state renderers ──────────────────────────────────────────
 
-  function renderNotInstalled() {
+  if (stateKey === 'checking' || stateKey === 'connecting') {
     return (
       <div className="wallet-state" data-testid="wallet-not-installed">
         <div className="wallet-state-icon">⚠️</div>
@@ -149,7 +147,7 @@ export function ClaimBurn({
     );
   }
 
-  function renderDisconnected() {
+  if (stateKey === 'notInstalled') {
     return (
       <div className="wallet-state" data-testid="wallet-disconnected">
         <div className="wallet-state-icon">💼</div>
@@ -168,7 +166,7 @@ export function ClaimBurn({
     );
   }
 
-  function renderConnecting() {
+  if (stateKey === 'disconnected') {
     return (
       <div className="wallet-state" data-testid="wallet-connecting">
         <div className="spinner" />
@@ -177,7 +175,7 @@ export function ClaimBurn({
     );
   }
 
-  function renderWrongNetwork() {
+  if (stateKey === 'wrongNetwork') {
     return (
       <div className="wallet-state" data-testid="wallet-wrong-network">
         <div className="wallet-state-icon">🌐</div>
@@ -196,7 +194,7 @@ export function ClaimBurn({
     );
   }
 
-  function renderError() {
+  if (stateKey === 'error') {
     return (
       <div className="wallet-state" data-testid="wallet-error">
         <div className="wallet-state-icon">⚠️</div>
@@ -215,8 +213,7 @@ export function ClaimBurn({
     );
   }
 
-  function renderForm() {
-    const isPending = phase === 'pending';
+  // ── Connected form ────────────────────────────────────────────────
 
     return (
       <>
@@ -250,15 +247,14 @@ export function ClaimBurn({
               <span className="wallet-info-address">
                 {connectedAddress.slice(0, 4)}&hellip;{connectedAddress.slice(-4)}
               </span>
-              {onDisconnect && (
-                <button
-                  className="btn-disconnect"
-                  onClick={onDisconnect}
-                  data-testid="disconnect-btn"
-                >
-                  Disconnect
-                </button>
-              )}
+              <button
+                className="btn-refresh-balance"
+                onClick={onRefreshBalance}
+                data-testid="refresh-balance-btn"
+                title="Refresh balance"
+              >
+                ↻
+              </button>
             </div>
             {walletBalance !== null && walletBalance !== undefined && onRefreshBalance && (
               <div className="wallet-balance-row">
