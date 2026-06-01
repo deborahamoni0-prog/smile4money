@@ -43,7 +43,8 @@ impl OracleContract {
             .ok_or(Error::Unauthorized)?;
         admin.require_auth();
 
-        if game_id.len() > MAX_GAME_ID_LEN {
+        let game_id_len = game_id.len();
+        if game_id_len == 0 || game_id_len > MAX_GAME_ID_LEN {
             return Err(Error::InvalidGameId);
         }
 
@@ -155,6 +156,21 @@ mod tests {
             client.try_get_result(&999u64),
             Err(Ok(Error::ResultNotFound))
         ));
+    }
+
+    #[test]
+    fn test_submit_result_empty_game_id_fails() {
+        let (env, contract_id) = setup();
+        let client = OracleContractClient::new(&env, &contract_id);
+
+        assert_eq!(
+            client.try_submit_result(
+                &0u64,
+                &String::from_str(&env, ""),
+                &MatchResult::Player1Wins,
+            ),
+            Err(Ok(Error::InvalidGameId))
+        );
     }
 
     #[test]
@@ -335,8 +351,6 @@ mod tests {
             ];
 
             let timestamp = env.ledger().timestamp();
-            let expected_data: soroban_sdk::Val =
-                (*match_id, expected_result.clone(), timestamp).into_val(&env);
 
             let events = env.events().all();
             let matched = events
@@ -350,9 +364,21 @@ mod tests {
             );
 
             let (_, _, actual_data) = matched.unwrap();
+            let (ev_match_id, ev_result, ev_timestamp): (u64, MatchResult, u64) =
+                soroban_sdk::TryFromVal::try_from_val(&env, &actual_data).unwrap();
             assert_eq!(
-                actual_data, expected_data,
-                "Event data mismatch for variant {:?}",
+                ev_match_id, *match_id,
+                "match_id mismatch for variant {:?}",
+                expected_result
+            );
+            assert_eq!(
+                &ev_result, expected_result,
+                "result mismatch for variant {:?}",
+                expected_result
+            );
+            assert_eq!(
+                ev_timestamp, timestamp,
+                "timestamp mismatch for variant {:?}",
                 expected_result
             );
         }

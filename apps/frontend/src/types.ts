@@ -1,4 +1,4 @@
-export type WalletStatus = 'notInstalled' | 'disconnected' | 'connecting' | 'connected' | 'error';
+export type WalletStatus = 'checking' | 'notInstalled' | 'disconnected' | 'connecting' | 'connected' | 'error';
 
 export type Mode = 'claim' | 'burn';
 

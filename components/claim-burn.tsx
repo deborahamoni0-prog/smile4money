@@ -1,16 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import '../styles/claim-burn.css';
+import React, { useState, useEffect } from 'react';
 
 type Mode = 'claim' | 'burn';
 type Status = 'idle' | 'confirm' | 'pending' | 'success' | 'error';
-type Theme = 'light' | 'dark' | 'system';
-
-interface TxRecord {
-  mode: Mode;
-  amount: string;
-  hash: string | null;
-  timestamp: number;
-}
 
 interface ClaimBurnProps {
   walletState: string;
@@ -23,37 +14,6 @@ interface ClaimBurnProps {
   publicKey?: string | null;
   balance?: string | null;
   expectedNetwork?: string;
-  theme?: Theme;
-}
-
-function isValidAmount(value: string): boolean {
-  const n = Number(value);
-  return value.trim() !== '' && !isNaN(n) && n > 0;
-}
-
-function useCopyToClipboard(timeoutMs = 2000) {
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
-
-  const copy = useCallback(async (text: string, key: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedKey(key);
-      setTimeout(() => setCopiedKey(null), timeoutMs);
-    } catch {
-      // clipboard not available
-    }
-  }, [timeoutMs]);
-
-  return { copiedKey, copy };
-}
-
-function resolveState(walletState: WalletState): string {
-  if (typeof walletState === 'string') return walletState;
-  return walletState.status;
-}
-
-function hasConfirmStep(walletState: WalletState): boolean {
-  return typeof walletState === 'object';
 }
 
 function isValidAmount(value: string): boolean {
@@ -72,15 +32,12 @@ export function ClaimBurn({
   publicKey,
   balance,
   expectedNetwork = 'testnet',
-  theme = 'system',
 }: ClaimBurnProps) {
-  const resolvedTheme = useResolvedTheme(theme);
   const [mode, setMode] = useState<Mode>('claim');
   const [amount, setAmount] = useState('');
   const [status, setStatus] = useState<Status>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [txHash, setTxHash] = useState<string | null>(null);
-  const { copiedKey, copy } = useCopyToClipboard();
 
   useEffect(() => {
     if (status === 'success') {
@@ -102,9 +59,7 @@ export function ClaimBurn({
 
   function handleAmountChange(e: React.ChangeEvent<HTMLInputElement>) {
     setAmount(e.target.value);
-    if (status === 'error' || status === 'success') {
-      resetFeedback();
-    }
+    if (status === 'error' || status === 'success') resetFeedback();
   }
 
   function handleMax() {
@@ -123,15 +78,11 @@ export function ClaimBurn({
   async function handleConfirm() {
     setStatus('pending');
     setErrorMsg('');
+    setTxHash(null);
     try {
       const action = mode === 'claim' ? onClaim : onBurn;
       const hash = await action?.(amount);
-      const resolvedHash = hash ?? null;
-      if (resolvedHash) setTxHash(resolvedHash);
-      setTxHistory(prev => [
-        { mode, amount, hash: resolvedHash, timestamp: Date.now() },
-        ...prev.slice(0, 4),
-      ]);
+      if (hash) setTxHash(hash);
       setStatus('success');
       setAmount('');
     } catch (err) {
@@ -144,42 +95,21 @@ export function ClaimBurn({
     setStatus('idle');
   }
 
-  const themeClass = `theme-${resolvedTheme}`;
-
-  // ── Wallet state screens ──────────────────────────────────────────
-
   if (walletState === 'checking' || walletState === 'connecting') {
     return (
-      <div className={`wallet-state ${themeClass}`} data-testid="wallet-connecting">
+      <div className="wallet-state" data-testid="wallet-connecting">
         <div className="spinner" />
-        <p className="wallet-state-message">Connecting to Freighter&hellip;</p>
-      </div>
-    );
-  }
-
-  if (walletState === 'notInstalled') {
-    return (
-      <div className={`wallet-state ${themeClass}`} data-testid="wallet-not-installed">
-        <span className="wallet-state-icon">⚠️</span>
-        <h3 className="wallet-state-title">Freighter Not Found</h3>
-        <p className="wallet-state-message">
-          Please install the{' '}
-          <a href="https://freighter.app" target="_blank" rel="noopener noreferrer">
-            Freighter wallet extension
-          </a>{' '}
-          to continue.
-        </p>
+        <p className="wallet-state-message">Connecting to wallet&hellip;</p>
       </div>
     );
   }
 
   if (walletState === 'disconnected') {
     return (
-      <div className={`wallet-state ${themeClass}`} data-testid="wallet-disconnected">
-        <span className="wallet-state-icon">💼</span>
+      <div className="wallet-state" data-testid="wallet-disconnected">
         <h3 className="wallet-state-title">Connect Your Wallet</h3>
         <p className="wallet-state-message">
-          Connect your Freighter wallet to claim rewards or burn tokens.
+          Connect your wallet to claim rewards or burn tokens.
         </p>
         <button className="btn btn-connect" onClick={onConnect} data-testid="connect-wallet-btn">
           Connect Wallet
@@ -190,11 +120,10 @@ export function ClaimBurn({
 
   if (walletState === 'wrongNetwork') {
     return (
-      <div className={`wallet-state ${themeClass}`} data-testid="wallet-wrong-network">
-        <span className="wallet-state-icon">🌐</span>
+      <div className="wallet-state" data-testid="wallet-wrong-network">
         <h3 className="wallet-state-title">Wrong Network</h3>
         <p className="wallet-state-message">
-          Please switch your Freighter wallet to <strong>{expectedNetwork}</strong>.
+          Please switch to <strong>{expectedNetwork}</strong>.
         </p>
         <button
           className="btn btn-switch-network"
@@ -209,12 +138,8 @@ export function ClaimBurn({
 
   if (walletState === 'error') {
     return (
-      <div className={`wallet-state ${themeClass}`} data-testid="wallet-error">
-        <span className="wallet-state-icon">⚠️</span>
+      <div className="wallet-state" data-testid="wallet-error">
         <h3 className="wallet-state-title">Connection Error</h3>
-        <p className="wallet-state-message">
-          An error occurred while connecting to your wallet.
-        </p>
         <button className="btn btn-connect" onClick={onConnect} data-testid="retry-connect-btn">
           Try Again
         </button>
@@ -222,17 +147,14 @@ export function ClaimBurn({
     );
   }
 
-  // ── Connected UI ──────────────────────────────────────────────────
-
   const isPending = status === 'pending';
   const showConfirm = status === 'confirm';
   const valid = isValidAmount(amount);
 
   return (
-    <div className={`claim-burn ${themeClass}`} data-testid="claim-burn" data-theme={resolvedTheme}>
+    <div className="claim-burn" data-testid="claim-burn">
       <h2 className="claim-burn-title">Claim &amp; Burn</h2>
 
-      {/* Toggle */}
       <div className="toggle" role="group" aria-label="Select mode">
         <button
           type="button"
@@ -254,21 +176,12 @@ export function ClaimBurn({
         </button>
       </div>
 
-      {/* Wallet info */}
       {publicKey && (
         <div className="wallet-info" data-testid="wallet-info">
           <div className="wallet-info-row">
-            <span className="wallet-info-label">Connected</span>
-            <button
-              type="button"
-              className="wallet-info-address btn-copy"
-              onClick={() => copy(publicKey, 'address')}
-              title="Copy full address"
-              data-testid="copy-address-btn"
-            >
+            <span className="wallet-info-address">
               {publicKey.slice(0, 4)}&hellip;{publicKey.slice(-4)}
-              <span className="copy-indicator">{copiedKey === 'address' ? ' Copied!' : ' Copy'}</span>
-            </button>
+            </span>
             {onDisconnect && (
               <button className="btn-disconnect" onClick={onDisconnect} data-testid="disconnect-btn">
                 Disconnect
@@ -277,7 +190,6 @@ export function ClaimBurn({
           </div>
           {balance != null && (
             <div className="wallet-balance-row">
-              <span className="wallet-balance-label">Balance</span>
               <span className="wallet-balance-value" data-testid="wallet-balance">
                 {balance} XLM
               </span>
@@ -296,34 +208,22 @@ export function ClaimBurn({
         </div>
       )}
 
-      {/* Confirmation overlay */}
       {showConfirm && (
         <div className="confirm-overlay" data-testid="confirm-overlay">
           <p className="confirm-text">
             {mode === 'claim' ? 'Claim' : 'Burn'} <strong>{amount}</strong> XLM?
           </p>
           <div className="confirm-buttons">
-            <button
-              type="button"
-              className="btn btn-cancel"
-              onClick={handleCancel}
-              data-testid="cancel-btn"
-            >
+            <button type="button" className="btn btn-cancel" onClick={handleCancel} data-testid="cancel-btn">
               Cancel
             </button>
-            <button
-              type="button"
-              className={`btn btn-${mode}`}
-              onClick={handleConfirm}
-              data-testid="confirm-btn"
-            >
+            <button type="button" className={`btn btn-${mode}`} onClick={handleConfirm} data-testid="confirm-btn">
               Confirm
             </button>
           </div>
         </div>
       )}
 
-      {/* Form */}
       <form onSubmit={handleRequestSubmit} data-testid="claim-burn-form">
         <div className="form-group">
           <label htmlFor="amount-input">Amount (XLM)</label>
@@ -340,13 +240,7 @@ export function ClaimBurn({
               data-testid="amount-input"
             />
             {mode === 'burn' && balance != null && (
-              <button
-                type="button"
-                className="btn-max"
-                onClick={handleMax}
-                disabled={isPending}
-                data-testid="max-btn"
-              >
+              <button type="button" className="btn-max" onClick={handleMax} disabled={isPending} data-testid="max-btn">
                 Max
               </button>
             )}
@@ -354,12 +248,7 @@ export function ClaimBurn({
         </div>
 
         {!showConfirm && (
-          <button
-            type="submit"
-            className={`btn btn-${mode}`}
-            disabled={isPending || !valid}
-            data-testid="submit-btn"
-          >
+          <button type="submit" className={`btn btn-${mode}`} disabled={isPending || !valid} data-testid="submit-btn">
             {isPending
               ? mode === 'claim' ? 'Claiming…' : 'Burning…'
               : mode === 'claim' ? 'Claim' : 'Burn'}
@@ -367,55 +256,16 @@ export function ClaimBurn({
         )}
       </form>
 
-      {/* Feedback */}
       {status === 'success' && (
         <p className="feedback success" role="status" data-testid="success-msg">
           {mode === 'claim' ? 'XLM claimed successfully!' : 'XLM burned successfully!'}
-          {txHash && (
-            <button
-              type="button"
-              className="tx-hash btn-copy"
-              onClick={() => copy(txHash, 'txhash')}
-              title="Copy transaction hash"
-              data-testid="copy-txhash-btn"
-            >
-              {txHash.slice(0, 8)}&hellip;{txHash.slice(-8)}
-              <span className="copy-indicator">{copiedKey === 'txhash' ? ' Copied!' : ' Copy'}</span>
-            </button>
-          )}
+          {txHash && <span className="tx-hash">{txHash}</span>}
         </p>
       )}
       {status === 'error' && (
         <p className="feedback error" role="alert" data-testid="error-msg">
           {errorMsg}
         </p>
-      )}
-
-      {/* Transaction History */}
-      {txHistory.length > 0 && (
-        <div className="tx-history" data-testid="tx-history">
-          <button
-            type="button"
-            className="tx-history-toggle"
-            onClick={() => setShowHistory(v => !v)}
-            aria-expanded={showHistory}
-          >
-            Recent Transactions ({txHistory.length})
-          </button>
-          {showHistory && (
-            <ul className="tx-history-list">
-              {txHistory.map((tx, i) => (
-                <li key={i} className="tx-history-item">
-                  <span className={`tx-badge tx-badge-${tx.mode}`}>{tx.mode}</span>
-                  <span className="tx-amount">{tx.amount} XLM</span>
-                  <span className="tx-time">
-                    {new Date(tx.timestamp).toLocaleTimeString()}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
       )}
     </div>
   );

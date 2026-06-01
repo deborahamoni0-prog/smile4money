@@ -91,40 +91,102 @@ pub enum Error {
 impl core::fmt::Display for Error {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Error::MatchNotFound =>
-                write!(f, "[E001] MatchNotFound: no match exists for the given match_id"),
-            Error::AlreadyFunded =>
-                write!(f, "[E002] AlreadyFunded: this player has already deposited their stake"),
-            Error::NotFunded =>
-                write!(f, "[E003] NotFunded: submit_result called before both players deposited"),
-            Error::Unauthorized =>
-                write!(f, "[E004] Unauthorized: caller is not permitted to perform this action"),
-            Error::InvalidState =>
-                write!(f, "[E005] InvalidState: operation not valid in the current match state"),
-            Error::AlreadyExists =>
-                write!(f, "[E006] AlreadyExists: a match record already exists at this ID"),
-            Error::AlreadyInitialized =>
-                write!(f, "[E007] AlreadyInitialized: contract has already been initialized"),
-            Error::Overflow =>
-                write!(f, "[E008] Overflow: match ID counter would exceed u64::MAX"),
-            Error::ContractPaused =>
-                write!(f, "[E009] ContractPaused: contract is paused; mutating operations are blocked"),
-            Error::InvalidAmount =>
-                write!(f, "[E010] InvalidAmount: stake_amount must be greater than zero"),
-            Error::InvalidGameId =>
-                write!(f, "[E011] InvalidGameId: game_id is empty or exceeds the 64-byte limit"),
-            Error::InvalidPlayers =>
-                write!(f, "[E012] InvalidPlayers: player1 and player2 must be different addresses"),
-            Error::GameIdMismatch =>
-                write!(f, "[E013] GameIdMismatch: oracle game_id does not match the stored game_id"),
-            Error::DuplicateGameId =>
-                write!(f, "[E014] DuplicateGameId: game_id is already linked to another match"),
-            Error::TransferFailed =>
-                write!(f, "[E015] TransferFailed: token transfer failed"),
-            Error::MatchCancelled =>
-                write!(f, "[E016] MatchCancelled: deposit rejected — match has been cancelled"),
-            Error::MatchCompleted =>
-                write!(f, "[E017] MatchCompleted: deposit rejected — match has already completed"),
+            Error::MatchNotFound => {
+                write!(f, "[E001] MatchNotFound: no match exists for the given match_id")
+            }
+            Error::AlreadyFunded => {
+                write!(
+                    f,
+                    "[E002] AlreadyFunded: this player has already deposited their stake"
+                )
+            }
+            Error::NotFunded => {
+                write!(
+                    f,
+                    "[E003] NotFunded: submit_result called before both players deposited"
+                )
+            }
+            Error::Unauthorized => {
+                write!(
+                    f,
+                    "[E004] Unauthorized: caller is not permitted to perform this action"
+                )
+            }
+            Error::InvalidState => {
+                write!(
+                    f,
+                    "[E005] InvalidState: operation not valid in the current match state"
+                )
+            }
+            Error::AlreadyExists => {
+                write!(
+                    f,
+                    "[E006] AlreadyExists: a match record already exists at this ID"
+                )
+            }
+            Error::AlreadyInitialized => {
+                write!(
+                    f,
+                    "[E007] AlreadyInitialized: contract has already been initialized"
+                )
+            }
+            Error::Overflow => {
+                write!(
+                    f,
+                    "[E008] Overflow: match ID counter would exceed u64::MAX"
+                )
+            }
+            Error::ContractPaused => {
+                write!(
+                    f,
+                    "[E009] ContractPaused: contract is paused; mutating operations are blocked"
+                )
+            }
+            Error::InvalidAmount => {
+                write!(
+                    f,
+                    "[E010] InvalidAmount: stake_amount must be greater than zero"
+                )
+            }
+            Error::InvalidGameId => {
+                write!(
+                    f,
+                    "[E011] InvalidGameId: game_id is empty or exceeds the 64-byte limit"
+                )
+            }
+            Error::InvalidPlayers => {
+                write!(
+                    f,
+                    "[E012] InvalidPlayers: player1 and player2 must be different addresses"
+                )
+            }
+            Error::GameIdMismatch => {
+                write!(
+                    f,
+                    "[E013] GameIdMismatch: oracle game_id does not match the stored game_id"
+                )
+            }
+            Error::DuplicateGameId => {
+                write!(
+                    f,
+                    "[E014] DuplicateGameId: game_id is already linked to another match"
+                )
+            }
+            Error::TransferFailed => {
+                write!(f, "[E015] TransferFailed: token transfer failed")
+            }
+            Error::MatchCancelled => {
+                write!(
+                    f,
+                    "[E016] MatchCancelled: deposit rejected — match has been cancelled"
+                )
+            }
+            Error::MatchCompleted => {
+                write!(
+                    f,
+                    "[E017] MatchCompleted: deposit rejected — match has already completed"
+                )
+            }
         }
     }
 }

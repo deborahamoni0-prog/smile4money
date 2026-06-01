@@ -27,7 +27,12 @@ impl EscrowContract {
 
     /// Initialize the contract with a trusted oracle address, an admin, and a default token.
     /// Returns `Error::InvalidToken` if the token address is not a valid token contract.
-    pub fn initialize(env: Env, oracle: Address, admin: Address, token: Address) -> Result<(), Error> {
+    pub fn initialize(
+        env: Env,
+        oracle: Address,
+        admin: Address,
+        token: Address,
+    ) -> Result<(), Error> {
         if env.storage().instance().has(&DataKey::Oracle) {
             panic!("Contract already initialized");
         }
@@ -107,7 +112,8 @@ impl EscrowContract {
         if player1 == player2 {
             return Err(Error::InvalidPlayers);
         }
-        if game_id.len() > MAX_GAME_ID_LEN {
+        let game_id_len = game_id.len();
+        if game_id_len == 0 || game_id_len > MAX_GAME_ID_LEN {
             return Err(Error::InvalidGameId);
         }
         // Reject duplicate game_id — same game cannot be used in multiple matches
@@ -351,10 +357,9 @@ impl EscrowContract {
     /// - If neither or only one player has deposited: the calling player's auth suffices.
     /// - If both players have deposited: both players must authorize, because cancelling
     ///   would withdraw funds that the other player has already committed.
+    ///
+    /// Cancelation is allowed while the contract is paused so players can recover funds.
     pub fn cancel_match(env: Env, match_id: u64, caller: Address) -> Result<(), Error> {
-        if Self::is_paused(&env) {
-            return Err(Error::ContractPaused);
-        }
         let mut m: Match = env
             .storage()
             .persistent()

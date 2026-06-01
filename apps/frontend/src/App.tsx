@@ -1,17 +1,27 @@
 import { ClaimBurn } from './components/claim-burn';
-import { useWallet } from './hooks/useWallet';
+import { useStellarWallet } from './hooks/useStellarWallet';
+import type { WalletStatus } from './types';
 
 export function App() {
-  const { state, publicKey, expectedNetwork, connect, switchNetwork } = useWallet();
+  const { status, address, connect } = useStellarWallet();
+
+  const handleClaim = async (amount: string): Promise<string | void> => {
+    console.info('Claim request', amount);
+  };
+
+  const handleBurn = async (amount: string): Promise<string | void> => {
+    console.info('Burn request', amount);
+  };
 
   return (
     <main style={{ padding: '2rem', minHeight: '100vh', background: '#f5f5f5' }}>
       <ClaimBurn
-        walletState={state}
+        walletState={status as WalletStatus}
         onConnect={connect}
-        onSwitchNetwork={switchNetwork}
-        publicKey={publicKey}
-        expectedNetwork={expectedNetwork}
+        onClaim={handleClaim}
+        onBurn={handleBurn}
+        publicKey={address}
+        expectedNetwork="testnet"
       />
     </main>
   );

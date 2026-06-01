@@ -1,5 +1,5 @@
 .claim-burn {
-  max-width: 400px;
+  max-width: 500px;
   margin: 0 auto;
   padding: 2rem;
   border-radius: 12px;
@@ -9,9 +9,9 @@
 }
 
 .claim-burn-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin: 0 0 1.5rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 2rem;
   text-align: center;
   color: #1a1a2e;
 }
@@ -23,31 +23,177 @@
 }
 
 .wallet-state-icon {
-  font-size: 2.5rem;
+  font-size: 3rem;
   margin-bottom: 1rem;
+  display: block;
 }
 
 .wallet-state-title {
-  font-size: 1.125rem;
+  font-size: 1.25rem;
   font-weight: 600;
-  margin: 0 0 0.5rem;
+  margin: 0 0 0.75rem;
   color: #1a1a2e;
 }
 
 .wallet-state-message {
-  font-size: 0.875rem;
+  font-size: 0.95rem;
   color: #666;
-  margin: 0 0 1.25rem;
-  line-height: 1.5;
+  margin: 0 0 1.5rem;
+  line-height: 1.6;
 }
 
 .wallet-state-message a {
   color: #6c63ff;
   text-decoration: none;
+  font-weight: 500;
 }
 
 .wallet-state-message a:hover {
   text-decoration: underline;
+}
+
+/* Spinner */
+.spinner {
+  width: 32px;
+  height: 32px;
+  margin: 1rem auto;
+  border: 3px solid #f0f0f0;
+  border-top: 3px solid #6c63ff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Toggle buttons */
+.toggle {
+  display: flex;
+  gap: 0;
+  margin-bottom: 2rem;
+  background: #f5f5f5;
+  padding: 4px;
+  border-radius: 8px;
+  width: 100%;
+}
+
+.toggle-btn {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: none;
+  background: transparent;
+  color: #666;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.toggle-btn:hover {
+  color: #333;
+}
+
+.toggle-btn.active {
+  background: #fff;
+  color: #6c63ff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* Wallet info */
+.wallet-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
+  background: #f9f9f9;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  font-size: 0.875rem;
+}
+
+.wallet-info-label {
+  color: #999;
+  font-weight: 500;
+}
+
+.wallet-info-address {
+  color: #1a1a2e;
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-weight: 600;
+}
+
+/* Form */
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #1a1a2e;
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.form-group input {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+  transition: border-color 0.2s ease;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #6c63ff;
+}
+
+.form-group input:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.form-group input.error {
+  border-color: #ef4444;
+}
+
+.btn-max {
+  padding: 0.75rem 1rem;
+  border: 1.5px solid #e0e0e0;
+  background: #fff;
+  border-radius: 8px;
+  color: #6c63ff;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-max:hover:not(:disabled) {
+  border-color: #6c63ff;
+  background: #f9f7ff;
+}
+
+.btn-max:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error-text {
+  color: #ef4444;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  margin-bottom: 0;
 }
 
 /* Buttons */
@@ -55,48 +201,212 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.625rem 1.25rem;
+  padding: 0.875rem 1.5rem;
   border: none;
   border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: 0.95rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s, opacity 0.2s;
+  transition: all 0.2s ease;
   width: 100%;
+  gap: 0.5rem;
 }
 
 .btn:disabled {
-  opacity: 0.5;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
 .btn-connect,
 .btn-switch-network {
-  background: #6c63ff;
+  background: linear-gradient(135deg, #6c63ff 0%, #5a52e0 100%);
   color: #fff;
 }
 
 .btn-connect:hover:not(:disabled),
 .btn-switch-network:hover:not(:disabled) {
-  background: #5a52e0;
+  background: linear-gradient(135deg, #5a52e0 0%, #4a42c0 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(108, 99, 255, 0.3);
 }
 
 .btn-claim {
-  background: #10b981;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   color: #fff;
 }
 
 .btn-claim:hover:not(:disabled) {
-  background: #059669;
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 
 .btn-burn {
-  background: #ef4444;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
   color: #fff;
 }
 
 .btn-burn:hover:not(:disabled) {
-  background: #dc2626;
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.btn-secondary {
+  background: #f0f0f0;
+  color: #666;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #e5e5e5;
+}
+
+/* Confirmation overlay */
+.confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.confirm-content {
+  background: #fff;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.confirm-content h3 {
+  font-size: 1.25rem;
+  margin: 0 0 1rem;
+  color: #1a1a2e;
+}
+
+.confirm-content p {
+  font-size: 0.95rem;
+  color: #666;
+  margin: 0 0 1.5rem;
+  line-height: 1.6;
+}
+
+.confirm-content strong {
+  color: #1a1a2e;
+  font-weight: 600;
+}
+
+.confirm-buttons {
+  display: flex;
+  gap: 1rem;
+}
+
+.confirm-buttons .btn {
+  flex: 1;
+}
+
+/* Feedback messages */
+.feedback {
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-top: 1.5rem;
+  text-align: center;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.feedback.success {
+  background: #ecfdf5;
+  border: 1px solid #d1fae5;
+  color: #065f46;
+}
+
+.feedback.error {
+  background: #fef2f2;
+  border: 1px solid #fee2e2;
+  color: #7f1d1d;
+}
+
+.feedback-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.feedback p {
+  margin: 0 0 1rem;
+  font-size: 0.95rem;
+}
+
+.feedback .btn {
+  max-width: 200px;
+  margin: 0 auto;
+}
+
+.tx-hash {
+  font-size: 0.75rem;
+  opacity: 0.8;
+  font-family: 'Monaco', 'Menlo', monospace;
+  margin: 0.5rem 0 0;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .claim-burn {
+    padding: 1.5rem;
+  }
+
+  .claim-burn-title {
+    font-size: 1.25rem;
+  }
+
+  .confirm-content {
+    width: 95%;
+  }
+
+  .toggle-btn {
+    font-size: 0.875rem;
+    padding: 0.625rem 0.75rem;
+  }
+
+  .btn {
+    font-size: 0.875rem;
+    padding: 0.75rem 1.25rem;
+  }
 }
 
 /* Toggle */
@@ -131,15 +441,17 @@
 
 /* Wallet info */
 .wallet-info {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
   padding: 0.5rem;
   margin-bottom: 1rem;
   background: #f0fdf4;
   border-radius: 6px;
   font-size: 0.8125rem;
+}
+
+.wallet-info-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .wallet-info-label {
@@ -151,6 +463,61 @@
   font-family: 'SF Mono', 'Fira Code', monospace;
   color: #10b981;
   font-weight: 600;
+}
+
+.wallet-balance-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.375rem;
+  padding-top: 0.375rem;
+  border-top: 1px solid #d1fae5;
+}
+
+.wallet-balance-label {
+  color: #666;
+  font-weight: 500;
+}
+
+.wallet-balance-value {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  color: #059669;
+  font-weight: 600;
+}
+
+.btn-disconnect {
+  margin-left: auto;
+  padding: 0.25rem 0.625rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #666;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.btn-disconnect:hover {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.btn-refresh-balance {
+  margin-left: auto;
+  padding: 0.125rem 0.375rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #fff;
+  font-size: 0.875rem;
+  color: #666;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-refresh-balance:hover {
+  background: #f3f4f6;
 }
 
 /* Form */
@@ -185,6 +552,36 @@ input:disabled {
   color: #9ca3af;
 }
 
+.input-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.input-row input {
+  flex: 1;
+}
+
+.btn-max {
+  padding: 0.625rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #f9fafb;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #6c63ff;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-max:hover:not(:disabled) {
+  background: #eef2ff;
+}
+
+.btn-max:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Feedback */
 .feedback {
   margin: 0.75rem 0 0;
@@ -203,6 +600,14 @@ input:disabled {
 .feedback.error {
   background: #fef2f2;
   color: #dc2626;
+}
+
+.tx-hash {
+  margin: 0.375rem 0 0;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.75rem;
+  color: #6c63ff;
+  word-break: break-all;
 }
 
 /* Spinner */
@@ -224,29 +629,25 @@ input:disabled {
 
 /* Confirmation overlay */
 .confirm-overlay {
-  margin-top: 0.75rem;
-  padding: 1rem;
-  border-radius: 8px;
-  background: #fefce8;
-  border: 1px solid #fde68a;
   text-align: center;
+  padding: 1.5rem 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fafafa;
+  margin-bottom: 0.75rem;
 }
 
-.confirm-message {
-  font-size: 0.9375rem;
-  color: #374151;
-  margin: 0 0 0.875rem;
-}
-
-.confirm-actions {
-  display: flex;
-  gap: 0.5rem;
+.confirm-text {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin: 0 0 1.25rem;
 }
 
 .btn-confirm {
   background: #10b981;
   color: #fff;
-  flex: 1;
+  margin-bottom: 0.5rem;
 }
 
 .btn-confirm:hover:not(:disabled) {
@@ -254,11 +655,11 @@ input:disabled {
 }
 
 .btn-cancel {
-  background: #e5e7eb;
-  color: #374151;
-  flex: 1;
+  background: #fff;
+  color: #666;
+  border: 1px solid #d1d5db;
 }
 
 .btn-cancel:hover:not(:disabled) {
-  background: #d1d5db;
+  background: #f3f4f6;
 }

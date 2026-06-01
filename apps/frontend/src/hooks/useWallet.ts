@@ -11,9 +11,14 @@ declare global {
       setAllowed: () => Promise<{ error?: { code: number; message: string } }>;
     };
   }
+  interface ImportMeta {
+    env: {
+      VITE_STELLAR_NETWORK?: string;
+    };
+  }
 }
 
-const EXPECTED_NETWORK = import.meta.env.VITE_STELLAR_NETWORK || 'testnet';
+const EXPECTED_NETWORK = (import.meta.env.VITE_STELLAR_NETWORK as string | undefined) || 'testnet';
 
 export function useWallet() {
   const [state, setState] = useState<WalletState>('checking');

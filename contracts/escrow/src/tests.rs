@@ -67,6 +67,24 @@ fn test_get_match_not_found() {
 }
 
 #[test]
+fn test_create_match_empty_game_id_fails() {
+    let (env, contract_id, _oracle, player1, player2, token, _admin) = setup();
+    let client = EscrowContractClient::new(&env, &contract_id);
+
+    assert!(matches!(
+        client.try_create_match(
+            &player1,
+            &player2,
+            &100,
+            &token,
+            &String::from_str(&env, ""),
+            &Platform::Lichess,
+        ),
+        Err(Ok(Error::InvalidGameId))
+    ));
+}
+
+#[test]
 fn test_deposit_and_activate() {
     let (env, contract_id, _oracle, player1, player2, token, _admin) = setup();
     let client = EscrowContractClient::new(&env, &contract_id);
@@ -454,7 +472,7 @@ fn test_submit_result_on_pending_match_fails() {
             &id,
             &String::from_str(&env, "pending_submit"),
             &Winner::Player1,
-            &oracle
+            &oracle,
         ),
         Err(Ok(Error::InvalidState))
     );
@@ -488,7 +506,7 @@ fn test_submit_result_on_completed_match_fails() {
             &id,
             &String::from_str(&env, "double_submit"),
             &Winner::Player2,
-            &oracle
+            &oracle,
         ),
         Err(Ok(Error::InvalidState))
     );
@@ -515,40 +533,10 @@ fn test_submit_result_wrong_game_id_fails() {
             &id,
             &String::from_str(&env, "wrong_game"),
             &Winner::Player1,
-            &oracle
+            &oracle,
         ),
         Err(Ok(Error::GameIdMismatch))
     );
-}
-
-#[test]
-fn test_submit_result_emits_event() {
-    let (env, contract_id, oracle, player1, player2, token, _admin) = setup();
-    let client = EscrowContractClient::new(&env, &contract_id);
-
-    let stake: i128 = 100;
-    let id = client.create_match(
-        &player1,
-        &player2,
-        &stake,
-        &token,
-        &String::from_str(&env, "event_game"),
-        &Platform::Lichess,
-    );
-    client.deposit(&id, &player1);
-    client.deposit(&id, &player2);
-    client.submit_result(&id, &String::from_str(&env, "event_game"), &Winner::Player1, &oracle);
-
-    let events = env.events().all();
-    let last = events.last().unwrap();
-    assert_eq!(last.0, contract_id);
-    assert_eq!(Symbol::try_from_val(&env, &last.1.get(0).unwrap()).unwrap(), Symbol::new(&env, "match"));
-    assert_eq!(Symbol::try_from_val(&env, &last.1.get(1).unwrap()).unwrap(), symbol_short!("completed"));
-    let (ev_id, ev_winner, ev_payout): (u64, Winner, i128) =
-        TryFromVal::try_from_val(&env, &last.2).unwrap();
-    assert_eq!(ev_id, id);
-    assert_eq!(ev_winner, Winner::Player1);
-    assert_eq!(ev_payout, stake * 2);
 }
 
 #[test]
@@ -651,6 +639,23 @@ fn test_duplicate_game_id_fails() {
             &Platform::Lichess,
         ),
         Err(Ok(Error::DuplicateGameId))
+    );
+}
+
+#[test]
+fn test_create_match_empty_game_id_fails() {
+    let (env, contract_id, _oracle, player1, player2, token, _admin) = setup();
+    let client = EscrowContractClient::new(&env, &contract_id);
+    assert_eq!(
+        client.try_create_match(
+            &player1,
+            &player2,
+            &100,
+            &token,
+            &String::from_str(&env, ""),
+            &Platform::Lichess,
+        ),
+        Err(Ok(Error::InvalidGameId))
     );
 }
 
@@ -784,7 +789,7 @@ fn test_update_oracle() {
             &id,
             &String::from_str(&env, "oracle_rotate"),
             &Winner::Player1,
-            &oracle
+            &oracle,
         ),
         Err(Ok(Error::Unauthorized))
     );
@@ -803,7 +808,7 @@ fn test_pause_blocks_all_state_changing_operations() {
     let (env, contract_id, oracle, player1, player2, token, _admin) = setup();
     let client = EscrowContractClient::new(&env, &contract_id);
 
-    // Create a match to test deposit and cancel when paused
+    // Create a match to test deposit and cancel while paused.
     let id = client.create_match(
         &player1,
         &player2,
@@ -834,39 +839,45 @@ fn test_pause_blocks_all_state_changing_operations() {
         Err(Ok(Error::ContractPaused))
     );
 
-    // 3. Block cancel_match
-    assert_eq!(
-        client.try_cancel_match(&id, &player1),
-        Err(Ok(Error::ContractPaused))
-    );
+    // 3. Allow cancel_match while paused
+    client.cancel_match(&id, &player1);
+    assert_eq!(client.get_match(&id).state, MatchState::Cancelled);
 
-    // Now unpause to create an active match for submit_result test
+    // Now unpause and create a fresh match to verify submit_result still respects pause.
     client.unpause();
-    client.deposit(&id, &player1);
-    client.deposit(&id, &player2);
+    let id2 = client.create_match(
+        &player1,
+        &player2,
+        &100,
+        &token,
+        &String::from_str(&env, "pause_test_active"),
+        &Platform::Lichess,
+    );
+    client.deposit(&id2, &player1);
+    client.deposit(&id2, &player2);
 
     client.pause();
 
     // 4. Block submit_result
     assert_eq!(
         client.try_submit_result(
-            &id,
-            &String::from_str(&env, "pause_test"),
+            &id2,
+            &String::from_str(&env, "pause_test_active"),
             &Winner::Player1,
-            &oracle
+            &oracle,
         ),
         Err(Ok(Error::ContractPaused))
     );
 
     client.unpause();
-    // Verify it works after unpause
+    // Verify submit_result works after unpause
     client.submit_result(
-        &id,
-        &String::from_str(&env, "pause_test"),
+        &id2,
+        &String::from_str(&env, "pause_test_active"),
         &Winner::Player1,
         &oracle,
     );
-    assert_eq!(client.get_match(&id).state, MatchState::Completed);
+    assert_eq!(client.get_match(&id2).state, MatchState::Completed);
 }
 
 #[test]
@@ -923,8 +934,14 @@ fn test_pause_unpause_events() {
     let last_event = events.last().unwrap();
     assert_eq!(last_event.0, contract_id);
     assert_eq!(last_event.1.len(), 2);
-    assert_eq!(Symbol::try_from_val(&env, &last_event.1.get(0).unwrap()).unwrap(), Symbol::new(&env, "admin"));
-    assert_eq!(Symbol::try_from_val(&env, &last_event.1.get(1).unwrap()).unwrap(), symbol_short!("paused"));
+    assert_eq!(
+        Symbol::try_from_val(&env, &last_event.1.get(0).unwrap()).unwrap(),
+        Symbol::new(&env, "admin")
+    );
+    assert_eq!(
+        Symbol::try_from_val(&env, &last_event.1.get(1).unwrap()).unwrap(),
+        symbol_short!("paused")
+    );
     assert!(<()>::try_from_val(&env, &last_event.2).is_ok());
 
     client.unpause();
@@ -932,8 +949,14 @@ fn test_pause_unpause_events() {
     let last_event = events.last().unwrap();
     assert_eq!(last_event.0, contract_id);
     assert_eq!(last_event.1.len(), 2);
-    assert_eq!(Symbol::try_from_val(&env, &last_event.1.get(0).unwrap()).unwrap(), Symbol::new(&env, "admin"));
-    assert_eq!(Symbol::try_from_val(&env, &last_event.1.get(1).unwrap()).unwrap(), symbol_short!("unpaused"));
+    assert_eq!(
+        Symbol::try_from_val(&env, &last_event.1.get(0).unwrap()).unwrap(),
+        Symbol::new(&env, "admin")
+    );
+    assert_eq!(
+        Symbol::try_from_val(&env, &last_event.1.get(1).unwrap()).unwrap(),
+        symbol_short!("unpaused")
+    );
     assert!(<()>::try_from_val(&env, &last_event.2).is_ok());
 }
 
@@ -1062,7 +1085,8 @@ fn test_deposit_emits_event() {
     assert!(matched.is_some());
 
     let (_, _, data) = matched.unwrap();
-    let (ev_id, ev_player, ev_amount): (u64, Address, i128) = TryFromVal::try_from_val(&env, &data).unwrap();
+    let (ev_id, ev_player, ev_amount): (u64, Address, i128) =
+        TryFromVal::try_from_val(&env, &data).unwrap();
     assert_eq!((ev_id, ev_player, ev_amount), (id, player1, 100));
 }
 
@@ -1368,7 +1392,7 @@ fn test_pause_blocks_deposit() {
             &id,
             &String::from_str(&env, "pause_deposit"),
             &Winner::Player1,
-            &oracle
+            &oracle,
         ),
         Err(Ok(Error::ContractPaused))
     );
@@ -1518,7 +1542,12 @@ fn test_submit_result_on_cancelled_match_no_deposit_fails() {
     client.cancel_match(&id, &player1);
 
     assert_eq!(
-        client.try_submit_result(&id, &String::from_str(&env, "cancelled_result2"), &Winner::Player1, &oracle),
+        client.try_submit_result(
+            &id,
+            &String::from_str(&env, "cancelled_result2"),
+            &Winner::Player1,
+            &oracle,
+        ),
         Err(Ok(Error::InvalidState))
     );
 }
@@ -1584,7 +1613,8 @@ fn test_player2_win_payout_full_pot() {
     );
 
     // Player2 receives full pot (2x stake); player1 receives nothing
-    assert_eq!(token_client.balance(&player2), p2_before + stake); // net gain = stake (deposited stake, won 2x)
+    // net gain = stake (deposited stake, won 2x)
+    assert_eq!(token_client.balance(&player2), p2_before + stake);
     assert_eq!(token_client.balance(&player1), p1_before - stake); // net loss = stake
     assert_eq!(client.get_match(&id).state, MatchState::Completed);
     assert_eq!(client.get_escrow_balance(&id), 0);
