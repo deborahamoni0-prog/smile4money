@@ -1,97 +1,70 @@
-"use client";
+import React, { useState, useEffect, useCallback } from 'react';
+import '../styles/claim-burn.css';
 
-import React, { useState, useCallback } from "react";
+type Mode = 'claim' | 'burn';
+type Status = 'idle' | 'confirm' | 'pending' | 'success' | 'error';
+type Theme = 'light' | 'dark' | 'system';
 
-type Mode = "claim" | "burn";
-type WalletState = "disconnected" | "connecting" | "connected" | "processing";
+interface TxRecord {
+  mode: Mode;
+  amount: string;
+  hash: string | null;
+  timestamp: number;
+}
 
 interface ClaimBurnProps {
-  walletState?: WalletState;
-  claimableAmount?: string;
-  burnableAmount?: string;
-  tokenSymbol?: string;
-  onConnect?: () => Promise<void>;
-  onClaim?: (amount: string) => Promise<void>;
-  onBurn?: (amount: string) => Promise<void>;
+  walletState: string;
+  onConnect?: () => void;
+  onClaim?: (amount: string) => Promise<string | void>;
+  onBurn?: (amount: string) => Promise<string | void>;
+  onSwitchNetwork?: () => void;
+  onDisconnect?: () => void;
+  onRefreshBalance?: () => void;
+  publicKey?: string | null;
+  balance?: string | null;
+  expectedNetwork?: string;
+  theme?: Theme;
 }
 
-function ModeToggle({
-  mode,
-  onChange,
-  disabled,
-}: {
-  mode: Mode;
-  onChange: (m: Mode) => void;
-  disabled?: boolean;
-}) {
+function StatusBadge({ walletState }: { walletState: WalletState }) {
+  const config: Record<WalletState, { label: string; color: string; dot: string }> = {
+    disconnected: { label: "Wallet Disconnected", color: "text-white/40",    dot: "bg-white/20" },
+    connecting:   { label: "Connecting…",          color: "text-amber-400",   dot: "bg-amber-400 animate-pulse" },
+    connected:    { label: "Wallet Connected",      color: "text-emerald-400", dot: "bg-emerald-400" },
+    processing:   { label: "Processing…",           color: "text-sky-400",    dot: "bg-sky-400 animate-pulse" },
+  };
+  const { label, color, dot } = config[walletState];
   return (
-    <div
-      role="group"
-      aria-label="Toggle between Claim and Burn modes"
-      className="flex w-full rounded-xl bg-white/10 p-1 gap-1"
-    >
-      {(["claim", "burn"] as Mode[]).map((m) => (
-        <button
-          key={m}
-          type="button"
-          role="tab"
-          aria-selected={mode === m}
-          disabled={disabled}
-          onClick={() => onChange(m)}
-          className={[
-            "flex-1 rounded-lg py-2.5 text-sm font-semibold capitalize transition-all duration-200",
-            "focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60",
-            mode === m
-              ? m === "claim"
-                ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30"
-                : "bg-rose-500 text-white shadow-lg shadow-rose-500/30"
-              : "text-white/60 hover:text-white/80",
-            disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
-          ].join(" ")}
-        >
-          {m === "claim" ? "✦ Claim" : "🔥 Burn"}
-        </button>
-      ))}
+    <div className={`flex items-center gap-2 text-xs font-medium ${color}`} aria-live="polite">
+      <span className={`w-2 h-2 rounded-full ${dot}`} aria-hidden="true" />
+      {label}
     </div>
   );
 }
 
-function AmountDisplay({
-  label,
-  amount,
-  symbol,
-  accent,
-}: {
-  label: string;
-  amount: string;
-  symbol: string;
-  accent: string;
-}) {
-  return (
-    <div className="rounded-xl bg-white/5 border border-white/10 p-4">
-      <p className="text-xs text-white/50 uppercase tracking-widest mb-1">{label}</p>
-      <p className={`text-3xl font-bold ${accent} tabular-nums`} aria-live="polite">
-        {amount}
-        <span className="ml-2 text-base font-medium text-white/60">{symbol}</span>
-      </p>
-    </div>
-  );
+function useCopyToClipboard(timeoutMs = 2000) {
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const copy = useCallback(async (text: string, key: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(null), timeoutMs);
+    } catch {
+      // clipboard not available
+    }
+  }, [timeoutMs]);
+
+  return { copiedKey, copy };
 }
 
-function Spinner({ size = 20 }: { size?: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-      className="animate-spin"
-    >
-      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25" />
-      <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-    </svg>
-  );
+function resolveState(walletState: WalletState): string {
+  if (typeof walletState === 'string') return walletState;
+  return walletState.status;
+}
+
+function hasConfirmStep(walletState: WalletState): boolean {
+  return typeof walletState === 'object';
 }
 
 function StatusBadge({ walletState }: { walletState: WalletState }) {
@@ -111,82 +84,181 @@ function StatusBadge({ walletState }: { walletState: WalletState }) {
 }
 
 export default function ClaimBurn({
-  walletState: ext,
+  walletState: externalWalletState,
   claimableAmount = "1,250.00",
-  burnableAmount = "450.00",
-  tokenSymbol = "S4M",
+  burnableAmount  = "450.00",
+  tokenSymbol     = "S4M",
   onConnect,
   onClaim,
   onBurn,
+  onSwitchNetwork,
+  onDisconnect,
+  onRefreshBalance,
+  publicKey,
+  balance,
+  expectedNetwork = 'testnet',
+  theme = 'system',
 }: ClaimBurnProps) {
-  const [mode, setMode]     = useState<Mode>("claim");
-  const [wState, setWState] = useState<WalletState>(ext ?? "disconnected");
+  const resolvedTheme = useResolvedTheme(theme);
+  const [mode, setMode] = useState<Mode>('claim');
+  const [amount, setAmount] = useState('');
+  const [status, setStatus] = useState<Status>('idle');
+  const [errorMsg, setErrorMsg] = useState('');
   const [txHash, setTxHash] = useState<string | null>(null);
-  const [error, setError]   = useState<string | null>(null);
-  const effective           = ext ?? wState;
+  const { copiedKey, copy } = useCopyToClipboard();
+
+  useEffect(() => {
+    if (status === 'success') {
+      const msg = mode === 'claim' ? 'XLM claimed successfully!' : 'XLM burned successfully!';
+      setAnnouncement(msg);
+      const timer = setTimeout(() => {
+        setStatus('idle');
+        setAnnouncement('');
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+    if (status === 'error') {
+      setAnnouncement(errorMsg || 'Transaction failed');
+    }
+  }, [status, mode, errorMsg]);
+
+  useEffect(() => {
+    if (status === 'confirm') {
+      confirmBtnRef.current?.focus();
+    }
+  }, [status]);
+
+  function resetFeedback() {
+    setStatus('idle');
+    setTxHash(null);
+    setErrorMsg('');
+    setAnnouncement('');
+  }
+
+  function handleToggle(newMode: Mode) {
+    setMode(newMode);
+    resetFeedback();
+    setTimeout(() => amountInputRef.current?.focus(), 0);
+  }
+
+  const effectiveState = externalWalletState ?? walletState;
 
   const handleConnect = useCallback(async () => {
     setError(null);
-    setWState("connecting");
+    setWalletState("connecting");
     try {
       if (onConnect) await onConnect();
       else await new Promise((r) => setTimeout(r, 1200));
-      setWState("connected");
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to connect");
-      setWState("disconnected");
+      setWalletState("connected");
+    } catch (e: any) {
+      setError(e?.message ?? "Failed to connect wallet");
+      setWalletState("disconnected");
     }
   }, [onConnect]);
 
-  const handleAction = useCallback(async () => {
-    setError(null);
-    setTxHash(null);
-    setWState("processing");
+  const handleConnect = useCallback(async () => {
+    setError(null); setWState("connecting");
+    try { if (onConnect) await onConnect(); else await new Promise(r => setTimeout(r, 1200)); setWState("connected"); }
+    catch (e: any) { setError(e?.message ?? "Failed to connect"); setWState("disconnected"); }
+  }, [onConnect]);
+
+  async function handleConfirm() {
+    setStatus('pending');
+    setErrorMsg('');
     try {
-      const amt = mode === "claim" ? claimableAmount : burnableAmount;
-      if (mode === "claim" && onClaim) await onClaim(amt);
-      else if (mode === "burn" && onBurn) await onBurn(amt);
-      else await new Promise((r) => setTimeout(r, 1800));
-      setTxHash("0x" + Math.random().toString(16).slice(2, 18).toUpperCase());
-      setWState("connected");
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Transaction failed");
-      setWState("connected");
+      const action = mode === 'claim' ? onClaim : onBurn;
+      const hash = await action?.(amount);
+      const resolvedHash = hash ?? null;
+      if (resolvedHash) setTxHash(resolvedHash);
+      setTxHistory(prev => [
+        { mode, amount, hash: resolvedHash, timestamp: Date.now() },
+        ...prev.slice(0, 4),
+      ]);
+      setStatus('success');
+      setAmount('');
+    } catch (err) {
+      setStatus('error');
+      setErrorMsg(err instanceof Error ? err.message : 'Transaction failed');
     }
-  }, [mode, claimableAmount, burnableAmount, onClaim, onBurn]);
+  }
 
-  const isProcessing   = effective === "processing";
-  const isDisconnected = effective === "disconnected" || effective === "connecting";
-  const isClaim        = mode === "claim";
-  const actionColor    = isClaim
-    ? "bg-emerald-500 hover:bg-emerald-400 shadow-emerald-500/40"
-    : "bg-rose-500 hover:bg-rose-400 shadow-rose-500/40";
+  function handleCancel() {
+    setStatus('idle');
+    setTimeout(() => amountInputRef.current?.focus(), 0);
+  }
 
-  return (
-    <section
-      aria-label="Claim and Burn"
-      className="w-full max-w-sm mx-auto rounded-2xl bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] p-6 flex flex-col gap-5 shadow-2xl"
-    >
-      <div className="flex items-center justify-between">
-        <h2 className="text-white font-bold text-lg tracking-tight">
-          {isClaim ? "Claim Rewards" : "Burn Tokens"}
-        </h2>
-        <StatusBadge walletState={effective} />
+  const themeClass = `theme-${resolvedTheme}`;
+
+  // ── Wallet state screens ──────────────────────────────────────────
+
+  if (walletState === 'checking' || walletState === 'connecting') {
+    return (
+      <div className={`wallet-state ${themeClass}`} data-testid="wallet-connecting">
+        <div className="spinner" />
+        <p className="wallet-state-message">Connecting to Freighter&hellip;</p>
+      </div>
+    );
+  }
+
+  if (walletState === 'notInstalled') {
+    return (
+      <div className={`wallet-state ${themeClass}`} data-testid="wallet-not-installed">
+        <span className="wallet-state-icon">⚠️</span>
+        <h3 className="wallet-state-title">Freighter Not Found</h3>
+        <p className="wallet-state-message">
+          Please install the{' '}
+          <a href="https://freighter.app" target="_blank" rel="noopener noreferrer">
+            Freighter wallet extension
+          </a>{' '}
+          to continue.
+        </p>
       </div>
 
-      <ModeToggle mode={mode} onChange={setMode} disabled={isProcessing} />
+  if (walletState === 'disconnected') {
+    return (
+      <div className={`wallet-state ${themeClass}`} data-testid="wallet-disconnected">
+        <span className="wallet-state-icon">💼</span>
+        <h3 className="wallet-state-title">Connect Your Wallet</h3>
+        <p className="wallet-state-message">
+          Connect your Freighter wallet to claim rewards or burn tokens.
+        </p>
+        <button className="btn btn-connect" onClick={onConnect} data-testid="connect-wallet-btn">
+          Connect Wallet
+        </button>
+      </div>
+    );
+  }
 
-      <AmountDisplay
-        label={isClaim ? "Available to Claim" : "Available to Burn"}
-        amount={isClaim ? claimableAmount : burnableAmount}
-        symbol={tokenSymbol}
-        accent={isClaim ? "text-emerald-400" : "text-rose-400"}
-      />
+  if (walletState === 'wrongNetwork') {
+    return (
+      <div className={`wallet-state ${themeClass}`} data-testid="wallet-wrong-network">
+        <span className="wallet-state-icon">🌐</span>
+        <h3 className="wallet-state-title">Wrong Network</h3>
+        <p className="wallet-state-message">
+          Please switch your Freighter wallet to <strong>{expectedNetwork}</strong>.
+        </p>
+        <button
+          className="btn btn-switch-network"
+          onClick={onSwitchNetwork}
+          data-testid="switch-network-btn"
+        >
+          Switch to {expectedNetwork}
+        </button>
+      </div>
+    );
+  }
 
-      <div className="rounded-xl bg-white/5 border border-white/10 p-3 text-xs text-white/50 leading-relaxed">
-        {isClaim
-          ? "Claiming transfers earned rewards to your connected wallet. Gas fees apply."
-          : "Burning permanently removes tokens from circulation, reducing total supply."}
+  if (walletState === 'error') {
+    return (
+      <div className={`wallet-state ${themeClass}`} data-testid="wallet-error">
+        <span className="wallet-state-icon">⚠️</span>
+        <h3 className="wallet-state-title">Connection Error</h3>
+        <p className="wallet-state-message">
+          An error occurred while connecting to your wallet.
+        </p>
+        <button className="btn btn-connect" onClick={onConnect} data-testid="retry-connect-btn">
+          Try Again
+        </button>
       </div>
 
       {error && (
@@ -199,32 +271,26 @@ export default function ClaimBurn({
         </div>
       )}
 
-      {txHash && !error && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="rounded-xl bg-emerald-500/10 border border-emerald-500/30 px-4 py-3 text-xs text-emerald-400 break-all"
-        >
-          ✓ Transaction submitted: <span className="font-mono">{txHash}</span>
-        </div>
-      )}
+  return (
+    <div className={`claim-burn ${themeClass}`} data-testid="claim-burn" data-theme={resolvedTheme}>
+      <h2 className="claim-burn-title">Claim &amp; Burn</h2>
 
       {isDisconnected ? (
         <button
           type="button"
           onClick={handleConnect}
-          disabled={effective === "connecting"}
+          disabled={effectiveState === "connecting"}
           aria-label="Connect wallet to continue"
           className={[
             "w-full rounded-xl py-3.5 text-sm font-bold text-white transition-all duration-200",
             "bg-indigo-600 hover:bg-indigo-500 shadow-lg shadow-indigo-600/30",
             "focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400",
-            effective === "connecting" ? "opacity-70 cursor-not-allowed" : "",
+            effectiveState === "connecting" ? "opacity-70 cursor-not-allowed" : "",
           ].join(" ")}
         >
           <span className="flex items-center justify-center gap-2">
-            {effective === "connecting" && <Spinner />}
-            {effective === "connecting" ? "Connecting Wallet…" : "Connect Wallet"}
+            {effectiveState === "connecting" && <Spinner />}
+            {effectiveState === "connecting" ? "Connecting Wallet…" : "Connect Wallet"}
           </span>
         </button>
       ) : (
@@ -248,8 +314,184 @@ export default function ClaimBurn({
               : isClaim ? "Claim Rewards" : "Burn Tokens"}
           </span>
         </button>
+      </div>
+
+      {/* Wallet info */}
+      {publicKey && (
+        <div className="wallet-info" data-testid="wallet-info">
+          <div className="wallet-info-row">
+            <span className="wallet-info-label">Connected</span>
+            <button
+              type="button"
+              className="wallet-info-address btn-copy"
+              onClick={() => copy(publicKey, 'address')}
+              title="Copy full address"
+              data-testid="copy-address-btn"
+            >
+              {publicKey.slice(0, 4)}&hellip;{publicKey.slice(-4)}
+              <span className="copy-indicator">{copiedKey === 'address' ? ' Copied!' : ' Copy'}</span>
+            </button>
+            {onDisconnect && (
+              <button className="btn-disconnect" onClick={onDisconnect} data-testid="disconnect-btn">
+                Disconnect
+              </button>
+            )}
+          </div>
+          {balance != null && (
+            <div className="wallet-balance-row">
+              <span className="wallet-balance-label">Balance</span>
+              <span className="wallet-balance-value" data-testid="wallet-balance" aria-label={`${balance} XLM`}>
+                {balance} XLM
+              </span>
+              {onRefreshBalance && (
+                <button
+                  className="btn-refresh-balance"
+                  onClick={onRefreshBalance}
+                  data-testid="refresh-balance-btn"
+                  aria-label="Refresh balance"
+                >
+                  ↻
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       )}
-    </section>
+
+      {/* Confirmation overlay */}
+      {showConfirm && (
+        <div
+          className="confirm-overlay"
+          data-testid="confirm-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Confirm ${mode}`}
+        >
+          <p className="confirm-text">
+            {mode === 'claim' ? 'Claim' : 'Burn'} <strong>{amount}</strong> XLM?
+          </p>
+          <div className="confirm-buttons">
+            <button
+              type="button"
+              className="btn btn-cancel"
+              onClick={handleCancel}
+              data-testid="cancel-btn"
+            >
+              Cancel
+            </button>
+            <button
+              ref={confirmBtnRef}
+              type="button"
+              className={`btn btn-${mode}`}
+              onClick={handleConfirm}
+              data-testid="confirm-btn"
+            >
+              Confirm
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Form */}
+      <form onSubmit={handleRequestSubmit} data-testid="claim-burn-form" aria-label={`${mode === 'claim' ? 'Claim' : 'Burn'} tokens`}>
+        <div className="form-group">
+          <label htmlFor="amount-input">Amount (XLM)</label>
+          <div className="input-row">
+            <input
+              ref={amountInputRef}
+              id="amount-input"
+              type="number"
+              min="0"
+              step="any"
+              value={amount}
+              onChange={handleAmountChange}
+              disabled={isPending}
+              placeholder="0.00"
+              data-testid="amount-input"
+              aria-describedby={balance != null ? 'wallet-balance' : undefined}
+              aria-invalid={amount !== '' && !valid}
+            />
+            {mode === 'burn' && balance != null && (
+              <button
+                type="button"
+                className="btn-max"
+                onClick={handleMax}
+                disabled={isPending}
+                data-testid="max-btn"
+                aria-label="Use maximum balance"
+              >
+                Max
+              </button>
+            )}
+          </div>
+        </div>
+
+        {!showConfirm && (
+          <button
+            type="submit"
+            className={`btn btn-${mode}`}
+            disabled={isPending || !valid}
+            data-testid="submit-btn"
+            aria-busy={isPending}
+          >
+            {isPending
+              ? mode === 'claim' ? 'Claiming…' : 'Burning…'
+              : mode === 'claim' ? 'Claim' : 'Burn'}
+          </button>
+        )}
+      </form>
+
+      {/* Feedback */}
+      {status === 'success' && (
+        <p className="feedback success" role="status" data-testid="success-msg">
+          {mode === 'claim' ? 'XLM claimed successfully!' : 'XLM burned successfully!'}
+          {txHash && (
+            <button
+              type="button"
+              className="tx-hash btn-copy"
+              onClick={() => copy(txHash, 'txhash')}
+              title="Copy transaction hash"
+              data-testid="copy-txhash-btn"
+            >
+              {txHash.slice(0, 8)}&hellip;{txHash.slice(-8)}
+              <span className="copy-indicator">{copiedKey === 'txhash' ? ' Copied!' : ' Copy'}</span>
+            </button>
+          )}
+        </p>
+      )}
+      {status === 'error' && (
+        <p className="feedback error" role="alert" data-testid="error-msg">
+          {errorMsg}
+        </p>
+      )}
+
+      {/* Transaction History */}
+      {txHistory.length > 0 && (
+        <div className="tx-history" data-testid="tx-history">
+          <button
+            type="button"
+            className="tx-history-toggle"
+            onClick={() => setShowHistory(v => !v)}
+            aria-expanded={showHistory}
+          >
+            Recent Transactions ({txHistory.length})
+          </button>
+          {showHistory && (
+            <ul className="tx-history-list">
+              {txHistory.map((tx, i) => (
+                <li key={i} className="tx-history-item">
+                  <span className={`tx-badge tx-badge-${tx.mode}`}>{tx.mode}</span>
+                  <span className="tx-amount">{tx.amount} XLM</span>
+                  <span className="tx-time">
+                    {new Date(tx.timestamp).toLocaleTimeString()}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
